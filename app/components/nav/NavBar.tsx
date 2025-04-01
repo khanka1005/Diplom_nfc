@@ -12,10 +12,13 @@ const NavBar = () => {
   const router = useRouter();
 
   const handleLogout = async () => {
+    if (typeof window === "undefined" || !auth) return;
+  
     await signOut(auth);
-    setUserName(null); // 🔹 Clear name instantly
+    setUserName(null);
     router.push("/");
   };
+  
 
   return (
     <nav className="text-black pt-10 py-4 px-8 shadow-md">
