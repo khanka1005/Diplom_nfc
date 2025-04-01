@@ -8,12 +8,14 @@ import { useRouter } from "next/navigation";
 import { FiLogOut } from "react-icons/fi";
 
 const NavBar = () => {
-  const { user, userName, setUserName } = useUser(); // Access setUserName
+  const { user, userName, setUserName, loading } = useUser(); // ✅ All hooks first
   const router = useRouter();
+
+  if (loading) return null; // ✅ Now safe
 
   const handleLogout = async () => {
     try {
-      const auth = getAuthClient(); // ✅ Access safely on the client
+      const auth = getAuthClient();
       await signOut(auth);
       setUserName(null);
       router.push("/");
@@ -21,8 +23,6 @@ const NavBar = () => {
       console.error("Logout error:", err);
     }
   };
-  
-  
 
   return (
     <nav className="text-black pt-10 py-4 px-8 shadow-md">
@@ -33,12 +33,11 @@ const NavBar = () => {
 
         <div className="flex gap-6 items-center">
           <Link href="/dashboard" className="hover:text-gray-400">Dashboard</Link>
-     
 
           {user ? (
             <div className="flex items-center gap-4">
               <span className="font-semibold text-blue-600">
-                {userName || "Loading..."} {/* 🔹 Shows instantly */}
+                {userName || "Loading..."}
               </span>
               <button
                 onClick={handleLogout}

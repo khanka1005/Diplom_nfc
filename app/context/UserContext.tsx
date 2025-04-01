@@ -9,21 +9,24 @@ interface UserContextType {
   user: any;
   userName: string | null;
   setUserName: (name: string | null) => void;
+  loading: boolean;
 }
 
 const UserContext = createContext<UserContextType>({
   user: null,
   userName: null,
   setUserName: () => {},
+  loading: true,
 });
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<any>(null);
   const [userName, setUserName] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true); // <-- new
 
   useEffect(() => {
     let unsubscribe: () => void;
-    // ✅ Ensure auth is only accessed in browser
+
     if (typeof window !== "undefined") {
       const auth = getAuthClient();
       const db = getFirestoreClient();
@@ -45,6 +48,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(null);
           setUserName(null);
         }
+
+        setLoading(false); // ✅ done checking
       });
     }
 
@@ -54,10 +59,11 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   return (
-    <UserContext.Provider value={{ user, userName, setUserName }}>
+    <UserContext.Provider value={{ user, userName, setUserName, loading }}>
       {children}
     </UserContext.Provider>
   );
 };
+
 
 export const useUser = () => useContext(UserContext);
