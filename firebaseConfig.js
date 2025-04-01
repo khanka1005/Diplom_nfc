@@ -1,14 +1,13 @@
-// firebaseConfig.ts
 import { initializeApp, getApps, getApp } from "firebase/app";
 import {
-  getFirestore,
-  enableIndexedDbPersistence,
   initializeFirestore,
+  getFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
 } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getAnalytics } from "firebase/analytics";
 
-// 🔐 Your config stays the same
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -19,39 +18,37 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// ✅ Initialize app
+// Initialize Firebase App
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-// ✅ Auth guard for client
-export const getAuthClient = () => {
-  if (typeof window === "undefined") throw new Error("Must be used in browser");
-  return getAuth(app);
-};
-
-// ✅ Analytics guard
-export const getAnalyticsClient = () => {
-  if (typeof window === "undefined") return null;
-  return getAnalytics(app);
-};
-
-// ✅ Firestore with Offline Persistence
+// ✅ Only initialize Firestore with cache once
 let firestoreInstance;
 
 export const getFirestoreClient = () => {
   if (!firestoreInstance) {
-    const db = getFirestore(app);
-
-    if (typeof window !== "undefined") {
-      enableIndexedDbPersistence(db).catch((err) => {
-        console.warn("⚠️ Offline persistence error:", err.code);
-      });
-    }
-
-    firestoreInstance = db;
+    // Make sure Firestore is initialized with persistence only once
+    firestoreInstance = initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
+    });
   }
 
   return firestoreInstance;
 };
 
+// ✅ Auth (browser only)
+export const getAuthClient = () => {
+  if (typeof window === "undefined") throw new Error("Must be used in browser");
+  return getAuth(app);
+};
+
+// ✅ Analytics
+export const getAnalyticsClient = () => {
+  if (typeof window === "undefined") return null;
+  return getAnalytics(app);
+};
+
 export const getGoogleProvider = () => new GoogleAuthProvider();
+
 export { app };

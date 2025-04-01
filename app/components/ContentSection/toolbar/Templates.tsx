@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
 import * as fabric from "fabric";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 interface TemplatesProps {
   canvasRef: React.RefObject<fabric.Canvas | null>;
@@ -20,8 +21,13 @@ const Templates: React.FC<TemplatesProps> = ({ canvasRef }) => {
   const [isLoading, setIsLoading] = useState(false);
   const db = getFirestore();
 
-  useEffect(() => {
-    const fetchTemplates = async () => {
+
+
+useEffect(() => {
+  const auth = getAuth();
+
+  const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    if (currentUser) {
       setIsLoading(true);
       try {
         const templateSnapshot = await getDocs(collection(db, "templates"));
@@ -37,10 +43,14 @@ const Templates: React.FC<TemplatesProps> = ({ canvasRef }) => {
       } finally {
         setIsLoading(false);
       }
-    };
+    } else {
+      console.warn("Not authenticated, cannot fetch templates.");
+    }
+  });
 
-    fetchTemplates();
-  }, []);
+  return () => unsubscribe();
+}, []);
+
 
   const handleTemplateClick = (template: DesignData) => {
     console.log("Applying Template:", template);
