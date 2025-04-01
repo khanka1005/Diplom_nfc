@@ -1,3 +1,4 @@
+"use client";
 import ContentSlider from "../components/ContentSection/ContentSlider";
 
 const Ordering = () => {
