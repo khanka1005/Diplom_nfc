@@ -138,8 +138,7 @@ const Template = ({ canvasState, onCanvasUpdate }: Section4Props) => {
       canvas.dispose();
     };
   }, );
-  const auth = getAuthClient();
-  const db = getFirestoreClient();
+
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -213,6 +212,8 @@ const Template = ({ canvasState, onCanvasUpdate }: Section4Props) => {
 
 
 const handleSaveToFirestore = async () => {
+  const auth = getAuthClient();
+  const db = getFirestoreClient();
     if (!canvasRef.current || !auth.currentUser) return;
   
     setSaving(true);
