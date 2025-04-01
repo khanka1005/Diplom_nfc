@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import {  collection, getDocs } from "firebase/firestore";
 
 import { getAuthClient, getFirestoreClient } from "@/firebaseConfig";
-
+import { onAuthStateChanged } from "firebase/auth";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { BsImages, BsClipboardCheck } from "react-icons/bs";
 import * as fabric from "fabric";
@@ -30,8 +30,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedTool, setSelectedTool] = useState<string>("gallery");
   const [isLoading, setIsLoading] = useState(false);
-  const auth = getAuthClient();
-  const db = getFirestoreClient();
+
   const [, setIsTextSelected] = useState(false);
 
   useEffect(() => {
@@ -56,59 +55,63 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
   }, [canvasRef]);
   
   useEffect(() => {
-    const fetchSavedDesigns = async () => {
-      if (!auth.currentUser) return;
+    const auth = getAuthClient();
+    const db = getFirestoreClient();
+    
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsLoading(true);
 
-      setIsLoading(true);
-      const user = auth.currentUser;
+        const fetchSavedDesigns = async () => {
+          try {
+            let allDesigns: DesignData[] = [];
 
-      try {
-        let allDesigns: DesignData[] = [];
+            if (selectedTool === "gallery") {
+              // Fetch card_view designs (section4)
+              const cardBaseSnapshot = await getDocs(collection(db, "users", user.uid, "card_view"));
+              const cardViewDocs = cardBaseSnapshot.docs.map((doc) => ({
+                id: doc.id,
+                designData: doc.data().cardBase,
+                section: "section4" as const,
+                previewImage: doc.data().previewImage || "", // Directly use the preview image from Firestore
+              }));
+              allDesigns = [...allDesigns, ...cardViewDocs];
+            } else if (selectedTool === "webview") {
+              // Fetch card_web designs (section5)
+              const canvasDataSnapshot = await getDocs(collection(db, "users", user.uid, "card_web"));
+              const cardWebDocs = canvasDataSnapshot.docs.map((doc) => ({
+                id: doc.id,
+                designData: doc.data().canvasData,
+                section: "section5" as const,
+                previewImage: doc.data().previewImage || "", // Directly use the preview image from Firestore
+              }));
+              allDesigns = [...allDesigns, ...cardWebDocs];
+            } else if (selectedTool === "templates") {
+              // Fetch templates (apply to section4)
+              const canvasDataSnapshot = await getDocs(collection(db, "templates"));
+              const templateDocs = canvasDataSnapshot.docs.map((doc) => ({
+                id: doc.id,
+                designData: doc.data().cardBase, // Fix this if needed
+                section: "section4" as const,
+                previewImage: doc.data().previewImage || "",
+              }));
+              allDesigns = [...allDesigns, ...templateDocs];
+            }
 
-        if (selectedTool === "gallery") {
-          // Fetch card_view designs (section4)
-          const cardBaseSnapshot = await getDocs(collection(db, "users", user.uid, "card_view"));
-          const cardViewDocs = cardBaseSnapshot.docs.map((doc) => ({
-            id: doc.id,
-            designData: doc.data().cardBase,
-            section: "section4" as const,
-            previewImage: doc.data().previewImage || "" // Directly use the preview image from Firestore
-          }));
-          allDesigns = [...allDesigns, ...cardViewDocs];
-        } else if (selectedTool === "webview") {
-          // Fetch card_web designs (section5)
-          const canvasDataSnapshot = await getDocs(collection(db, "users", user.uid, "card_web"));
-          const cardWebDocs = canvasDataSnapshot.docs.map((doc) => ({
-            id: doc.id,
-            designData: doc.data().canvasData,
-            section: "section5" as const,
-            previewImage: doc.data().previewImage || "" // Directly use the preview image from Firestore
-          }));
-          allDesigns = [...allDesigns, ...cardWebDocs];
-        } else if (selectedTool === "templates") {
-         
-          const canvasDataSnapshot = await getDocs(collection(db, "templates"));
-          const templateDocs = canvasDataSnapshot.docs.map((doc) => ({
-            id: doc.id,
-            designData: doc.data().cardBase, // Fix this
-            section: "section4" as const, // Templates apply to section4
-            previewImage: doc.data().previewImage || "",
-          }));
-          allDesigns = [...allDesigns, ...templateDocs];
-        }
-        
+            setDesigns(allDesigns);
+          } catch (error) {
+            console.error("Error fetching saved designs:", error);
+          } finally {
+            setIsLoading(false);
+          }
+        };
 
-
-        setDesigns(allDesigns);
-      } catch (error) {
-        console.error("Error fetching saved designs:", error);
-      } finally {
-        setIsLoading(false);
+        fetchSavedDesigns();
       }
-    };
+    });
 
-    fetchSavedDesigns();
-  }, [auth.currentUser, selectedTool]);
+    return () => unsubscribe();
+  }, [selectedTool]);
 
   const handleDesignClick = (design: DesignData) => {
     

@@ -81,8 +81,7 @@ const Section5 = ({ canvasState, onCanvasUpdate }: Section5Props) => {
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  const auth = getAuthClient();
-  const db = getFirestoreClient();
+ 
 
   // Load canvas state if provided
   useEffect(() => {
@@ -575,6 +574,8 @@ END:VCARD`;
 
   // Save to Firestore
   const handleSyncToWeb = async () => {
+    const auth = getAuthClient();
+    const db = getFirestoreClient();
     if (!canvasRef2.current) return;
     const canvas = canvasRef2.current;
   

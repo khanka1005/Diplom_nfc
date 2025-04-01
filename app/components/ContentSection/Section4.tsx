@@ -44,8 +44,7 @@ const Section4 = ({ canvasState, onCanvasUpdate }: Section4Props) => {
   const backgroundRef = useRef<fabric.Rect | null>(null);
 
   const [saving, setSaving] = useState(false);
-  const auth = getAuthClient();
-  const db = getFirestoreClient();
+
  
 
   
@@ -234,6 +233,8 @@ const Section4 = ({ canvasState, onCanvasUpdate }: Section4Props) => {
 
 
   const handleSaveToFirestore = async () => {
+    const auth = getAuthClient();
+    const db = getFirestoreClient();
     if (!canvasRef.current || !auth.currentUser) return;
 
     setSaving(true);
