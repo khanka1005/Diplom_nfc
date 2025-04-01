@@ -9,61 +9,56 @@ interface UserContextType {
   user: any;
   userName: string | null;
   setUserName: (name: string | null) => void;
-  loading: boolean;
+  authLoading: boolean;
 }
 
 const UserContext = createContext<UserContextType>({
   user: null,
   userName: null,
   setUserName: () => {},
-  loading: true,
+  authLoading: true,
 });
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<any>(null);
   const [userName, setUserName] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true); // <-- new
+  const [authLoading, setAuthLoading] = useState(true); // ✅
 
   useEffect(() => {
-    let unsubscribe: () => void;
+    if (typeof window === "undefined") return;
 
-    if (typeof window !== "undefined") {
-      const auth = getAuthClient();
-      const db = getFirestoreClient();
+    const auth = getAuthClient();
+    const db = getFirestoreClient();
 
-      unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-        if (currentUser) {
-          setUser(currentUser);
-          setUserName("Loading...");
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        setUserName("Loading...");
 
-          try {
-            const userDoc = doc(db, "users", currentUser.uid);
-            const snap = await getDoc(userDoc);
-            setUserName(snap.exists() ? snap.data().name : "User");
-          } catch (err) {
-            console.error("Failed to fetch user name:", err);
-            setUserName("User");
-          }
-        } else {
-          setUser(null);
-          setUserName(null);
+        try {
+          const userRef = doc(db, "users", currentUser.uid);
+          const userSnap = await getDoc(userRef);
+          setUserName(userSnap.exists() ? userSnap.data().name : "User");
+        } catch (err: any) {
+          console.error("❌ Failed to fetch user name:", err);
+          setUserName("User");
         }
+      } else {
+        setUser(null);
+        setUserName(null);
+      }
 
-        setLoading(false); // ✅ done checking
-      });
-    }
+      setAuthLoading(false); // ✅ auth check finished
+    });
 
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
+    return () => unsubscribe();
   }, []);
 
   return (
-    <UserContext.Provider value={{ user, userName, setUserName, loading }}>
+    <UserContext.Provider value={{ user, userName, setUserName, authLoading }}>
       {children}
     </UserContext.Provider>
   );
 };
-
 
 export const useUser = () => useContext(UserContext);

@@ -16,19 +16,22 @@ const Ordering = () => {
 
   useEffect(() => {
     const auth = getAuthClient();
-
+  
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         console.log("🔥 Auth user ready:", currentUser);
         setUser(currentUser);
       } else {
-        console.log("❌ No authenticated user.");
+        if (!loading) {
+          console.log("❌ No authenticated user.");
+        }
       }
-      setLoading(false); // ✅ Mark auth as resolved
+      setLoading(false);
     });
-
+  
     return () => unsubscribe();
   }, []);
+  
 
   if (loading) return null; // 🔁 Or show a spinner if you prefer
 

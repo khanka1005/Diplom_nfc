@@ -8,10 +8,10 @@ import { useRouter } from "next/navigation";
 import { FiLogOut } from "react-icons/fi";
 
 const NavBar = () => {
-  const { user, userName, setUserName, loading } = useUser(); // ✅ All hooks first
+  const { user, userName, setUserName, authLoading } = useUser(); // ✅ All hooks first
   const router = useRouter();
 
-  if (loading) return null; // ✅ Now safe
+  if (authLoading) return null;
 
   const handleLogout = async () => {
     try {

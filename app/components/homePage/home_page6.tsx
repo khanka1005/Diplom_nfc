@@ -17,7 +17,7 @@ const HomePage6 = () => {
 
           {/* Centered Video */}
           <video 
-            src="/video1.mov"  
+             src={undefined}
             controls
             className="w-full max-w-4xl rounded-lg shadow-lg mt-7 mb-20"
           />
