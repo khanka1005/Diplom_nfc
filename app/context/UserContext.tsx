@@ -1,22 +1,22 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { auth, db } from "@/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
+import { getAuthClient, getFirestoreClient } from "@/firebaseConfig";
 
 // Define User Context Type
 interface UserContextType {
   user: any;
   userName: string | null;
-  setUserName: (name: string | null) => void; // Function to update name instantly
+  setUserName: (name: string | null) => void;
 }
 
 // Create Context
 const UserContext = createContext<UserContextType>({
   user: null,
   userName: null,
-  setUserName: () => {}, // Placeholder function
+  setUserName: () => {},
 });
 
 // Create Provider
@@ -25,18 +25,20 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [userName, setUserName] = useState<string | null>(null);
 
   useEffect(() => {
+    const auth = getAuthClient();
+    const db = getFirestoreClient();
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        setUserName("Loading..."); // Set temporary name to avoid delay
-        
-        // Fetch user name from Firestore
-        const userRef = doc(db, "users", currentUser.uid);
-        const userSnap = await getDoc(userRef);
+        setUserName("Loading...");
 
-        if (userSnap.exists()) {
-          setUserName(userSnap.data().name);
-        } else {
+        try {
+          const userRef = doc(db, "users", currentUser.uid);
+          const userSnap = await getDoc(userRef);
+          setUserName(userSnap.exists() ? userSnap.data().name : "User");
+        } catch (err) {
+          console.error("Failed to fetch user name:", err);
           setUserName("User");
         }
       } else {
@@ -55,5 +57,5 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-// Custom Hook to Use Context
+// Custom Hook
 export const useUser = () => useContext(UserContext);
