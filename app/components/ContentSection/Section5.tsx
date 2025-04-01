@@ -24,6 +24,7 @@ import {
   BsChevronDown,
 } from "react-icons/bs";
 import { FabricImage } from "fabric";
+import { onAuthStateChanged } from "firebase/auth";
 
 type Section5Props = {
   canvasState?: string;
@@ -576,10 +577,11 @@ END:VCARD`;
   const handleSyncToWeb = async () => {
     const auth = getAuthClient();
     const db = getFirestoreClient();
+  
     if (!canvasRef2.current) return;
     const canvas = canvasRef2.current;
-  
     const json = canvas.toJSON();
+  
     if (!json) {
       toast.error("Failed to generate canvas JSON");
       return;
@@ -600,35 +602,37 @@ END:VCARD`;
       onCanvasUpdate(JSON.stringify(sanitizedJson));
     }
   
-    try {
-      const user = auth.currentUser;
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      unsubscribe();
       if (!user) {
         toast.error("User not authenticated");
         return;
       }
   
-      const userRef = doc(db, "users", user.uid);
+      try {
+        const userRef = doc(db, "users", user.uid);
   
-      const payload = {
-        userId: user.uid,
-        timestamp: new Date(),
-        userInfo,
-        socialLinks: socialLinks.map(({ platform, url }) => ({ platform, url })),
-        canvasData: JSON.stringify(sanitizedJson),
-        previewImage,
-      };
+        const payload = {
+          userId: user.uid,
+          timestamp: new Date(),
+          userInfo,
+          socialLinks: socialLinks.map(({ platform, url }) => ({ platform, url })),
+          canvasData: JSON.stringify(sanitizedJson),
+          previewImage,
+        };
   
-      await addDoc(collection(userRef, "card_web"), payload);
-      const publicRef = await addDoc(collection(db, "card_public"), payload);
+        await addDoc(collection(userRef, "card_web"), payload);
+        const publicRef = await addDoc(collection(db, "card_public"), payload);
   
-      const shareUrl = `${window.location.origin}/card-view/${publicRef.id}`;
+        const shareUrl = `${window.location.origin}/card-view/${publicRef.id}`;
   
-      toast.success(`Card saved! Ready to write to NFC:\n${shareUrl}`);
-      console.log("NFC Link:", shareUrl);
-    } catch (error) {
-      console.error("Error saving to Firestore:", error);
-      toast.error("Failed to save data.");
-    }
+        toast.success(`Card saved! Ready to write to NFC:\n${shareUrl}`);
+        console.log("NFC Link:", shareUrl);
+      } catch (error) {
+        console.error("Error saving to Firestore:", error);
+        toast.error("Failed to save data.");
+      }
+    });
   };
   
   return (

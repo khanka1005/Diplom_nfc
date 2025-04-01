@@ -7,6 +7,7 @@ import {  collection, addDoc } from "firebase/firestore";
 import { getAuthClient, getFirestoreClient } from "@/firebaseConfig";
 import { v4 as uuidv4 } from "uuid";
 import Toolbar from "./Toolbar";
+import { onAuthStateChanged } from "firebase/auth";
 // Preserve custom properties like `isCardBase` during serialization
 (fabric.Object.prototype as any).toObject = (function (toObject) {
   return function (this: fabric.Object, ...args: any[]) {
@@ -235,11 +236,15 @@ const Section4 = ({ canvasState, onCanvasUpdate }: Section4Props) => {
   const handleSaveToFirestore = async () => {
     const auth = getAuthClient();
     const db = getFirestoreClient();
-    if (!canvasRef.current || !auth.currentUser) return;
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user || !canvasRef.current) {
+        setSaving(false);
+        return;
+      }
 
     setSaving(true);
     const canvas = canvasRef.current;
-    const user = auth.currentUser;
+    
 
     // Get the objects from the canvas and exclude the cardBase (fixed background)
     const filteredObjects = canvas.getObjects().filter((obj) => {
@@ -274,7 +279,9 @@ const Section4 = ({ canvasState, onCanvasUpdate }: Section4Props) => {
       alert("Failed to save card.");
     } finally {
       setSaving(false);
+      unsubscribe();
     }
+  });
   };
 
   return (

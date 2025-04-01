@@ -7,6 +7,7 @@ import {  collection, addDoc,getDoc, doc } from "firebase/firestore";
 import { getAuthClient, getFirestoreClient } from "@/firebaseConfig";
 import { v4 as uuidv4 } from "uuid";
 import Toolbar from "@/app/components/ContentSection/Toolbar";
+import { onAuthStateChanged } from "firebase/auth";
 
 type Section4Props = {
     canvasState?: string; // Base64 image or JSON string of canvas state
@@ -214,57 +215,62 @@ const Template = ({ canvasState, onCanvasUpdate }: Section4Props) => {
 const handleSaveToFirestore = async () => {
   const auth = getAuthClient();
   const db = getFirestoreClient();
-    if (!canvasRef.current || !auth.currentUser) return;
-  
-    setSaving(true);
-    const canvas = canvasRef.current;
-    const user = auth.currentUser;
-  
-    // Get the objects from the canvas and exclude the cardBase (fixed background)
-    const filteredObjects = canvas.getObjects().filter((obj) => {
-      return obj !== cardBaseRef.current && obj !== backgroundRef.current;
-    });
-  
-    // Create a new JSON object for saving that does not include the cardBase
-    const filteredJsonState = JSON.stringify({
-      ...canvas.toJSON(),
-      objects: filteredObjects,
-    });
-  
-    const previewImage = canvas.toDataURL({
-      format: "png",
-      quality: 1,
-      multiplier: 1,
-    });
-  
+
+  if (!canvasRef.current) return;
+
+  setSaving(true);
+
+  const canvas = canvasRef.current;
+
+  const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    unsubscribe(); // prevent double calls
+
+    if (!user) {
+      console.warn("User not authenticated.");
+      setSaving(false);
+      return;
+    }
+
     try {
-      // Generate a unique card ID
-      const cardId = uuidv4();
-  
-      // Check if the user is an admin
+      const filteredObjects = canvas.getObjects().filter(
+        (obj) => obj !== cardBaseRef.current && obj !== backgroundRef.current
+      );
+
+      const filteredJsonState = JSON.stringify({
+        ...canvas.toJSON(),
+        objects: filteredObjects,
+      });
+
+      const previewImage = canvas.toDataURL({
+        format: "png",
+        quality: 1,
+        multiplier: 1,
+      });
+
       const userDoc = await getDoc(doc(db, "users", user.uid));
       const isAdmin = userDoc.exists() && userDoc.data().isAdmin;
-  
-      // Choose collection based on user role
+
       const collectionPath = isAdmin
-        ? "templates" // Admin templates
-        : `users/${user.uid}/card_view`; // User-specific cards
-  
+        ? "templates"
+        : `users/${user.uid}/card_view`;
+
       await addDoc(collection(db, collectionPath), {
-        id: cardId,
+        id: uuidv4(),
         cardBase: filteredJsonState,
         previewImage,
         createdAt: new Date().toISOString(),
       });
-  
+
       alert("Card saved successfully!");
-    } catch (error) {
-      console.error("Error saving card:", error);
+    } catch (err) {
+      console.error("Firestore error:", err);
       alert("Failed to save card.");
     } finally {
       setSaving(false);
     }
-  };
+  });
+};
+
   
 
   return (
