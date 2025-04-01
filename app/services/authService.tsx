@@ -1,7 +1,10 @@
-import { auth, db } from "@/firebaseConfig";
+import { getAuthClient, getFirestoreClient } from "@/firebaseConfig";
+
+
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-
+const auth = getAuthClient();
+const db = getFirestoreClient();
 export const loginUser = async (email: string, password: string) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
