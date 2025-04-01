@@ -30,7 +30,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
   const [isLoading, setIsLoading] = useState(false);
   const auth = getAuth();
   const db = getFirestore();
-  const [isTextSelected, setIsTextSelected] = useState(false);
+  const [, setIsTextSelected] = useState(false);
 
   useEffect(() => {
     if (!canvasRef || !canvasRef.current) return; // Check for undefined or null

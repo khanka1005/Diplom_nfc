@@ -2,28 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { getFirestore, doc, getDoc, collection } from "firebase/firestore";
+import { getFirestore, doc, getDoc} from "firebase/firestore";
 import * as fabric from "fabric";
-import { FabricImage } from "fabric";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import {
-  BsFacebook,
-  BsInstagram,
-  BsTwitter,
-  BsLinkedin,
-  BsYoutube,
-  BsTiktok,
-  BsPinterest,
-  BsSnapchat,
-  BsGithub,
-  BsWhatsapp,
-  BsPhone,
-  BsEnvelope,
-  BsDownload,
-  BsPersonVcard
-} from "react-icons/bs";
-
 type SocialLink = {
   platform: string;
   url: string;
@@ -60,18 +42,7 @@ const CardViewPage = () => {
   const db = getFirestore();
 
   // Social media icons mapping
-  const socialIcons: { [key: string]: React.ElementType } = {
-    Facebook: BsFacebook,
-    Instagram: BsInstagram,
-    Twitter: BsTwitter,
-    LinkedIn: BsLinkedin,
-    YouTube: BsYoutube,
-    TikTok: BsTiktok,
-    Pinterest: BsPinterest,
-    Snapchat: BsSnapchat,
-    GitHub: BsGithub,
-    WhatsApp: BsWhatsapp,
-  };
+  
 
   // Fetch card data from Firestore
   useEffect(() => {

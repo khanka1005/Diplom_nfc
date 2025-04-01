@@ -20,10 +20,7 @@ import {
   BsSnapchat,
   BsGithub,
   BsWhatsapp,
-  BsPhone,
-  BsEnvelope,
   BsChevronDown,
-  BsDownload,
 } from "react-icons/bs";
 import { FabricImage } from "fabric";
 
@@ -545,7 +542,7 @@ END:VCARD`;
             canvas.requestRenderAll();
             return true;
           },
-          render: (ctx, left, top, styleOverride, fabricObject) => {
+          render: (ctx, left, top,) => {
             const size = 16;
             ctx.save();
             ctx.translate(left, top);

@@ -95,7 +95,7 @@ const Template = ({ canvasState, onCanvasUpdate }: Section4Props) => {
             canvas.loadFromJSON(jsonState, () => {
               canvas.renderAll();
             });
-          } catch (error) {
+          } catch {
             console.warn("Canvas state is not JSON, treating as Base64 image.");
   
             // Clear existing canvas

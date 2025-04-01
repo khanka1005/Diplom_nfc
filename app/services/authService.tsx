@@ -6,7 +6,7 @@ export const loginUser = async (email: string, password: string) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     return userCredential.user;
-  } catch (error) {
+  } catch  {
     throw new Error("Login failed. Please check your credentials.");
   }
 };
@@ -24,7 +24,7 @@ export const registerUser = async (name: string, email: string, password: string
     });
 
     return user;
-  } catch (error) {
+  } catch  {
     throw new Error("Registration failed. Try again.");
   }
 };
