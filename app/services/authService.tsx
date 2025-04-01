@@ -20,6 +20,7 @@ export const registerUser = async (name: string, email: string, password: string
     await setDoc(doc(db, "users", user.uid), {
       name,
       email,
+      isAdmin: false,
     });
 
     return user;

@@ -2,40 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as fabric from "fabric";
-import { getFirestore, collection, addDoc } from "firebase/firestore";
+import { getFirestore, collection, addDoc,getDoc, doc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { v4 as uuidv4 } from "uuid";
-import Toolbar from "./Toolbar";
-// Preserve custom properties like `isCardBase` during serialization
-(fabric.Object.prototype as any).toObject = (function (toObject) {
-  return function (this: fabric.Object, ...args: any[]) {
-    return {
-      ...toObject.apply(this, args),
-      isCardBase: (this as any).isCardBase || undefined,
-    };
-  };
-})((fabric.Object.prototype as any).toObject);
-
-(fabric.Object.prototype as any).initialize = (function (initialize) {
-  return function (this: fabric.Object, options: any, ...args: any[]) {
-    initialize.apply(this, [options, ...args]);
-    if (options?.isCardBase !== undefined) {
-      (this as any).isCardBase = options.isCardBase;
-    }
-  };
-})((fabric.Object.prototype as any).initialize);
-
-
-
-
-
+import Toolbar from "@/app/components/ContentSection/Toolbar";
 
 type Section4Props = {
-  canvasState?: string; // Base64 image or JSON string of canvas state
-  onCanvasUpdate?: (state: string) => void; // Callback to send updates to parent
-};
-
-const Section4 = ({ canvasState, onCanvasUpdate }: Section4Props) => {
+    canvasState?: string; // Base64 image or JSON string of canvas state
+    onCanvasUpdate?: (state: string) => void; // Callback to send updates to parent
+  };
+const Template = ({ canvasState, onCanvasUpdate }: Section4Props) => {
   const canvasRef = useRef<fabric.Canvas | null>(null);
   const canvasElementRef = useRef<HTMLCanvasElement | null>(null);
   const brandTextRef = useRef<fabric.Text | null>(null);
@@ -45,8 +21,6 @@ const Section4 = ({ canvasState, onCanvasUpdate }: Section4Props) => {
   const [saving, setSaving] = useState(false);
   const db = getFirestore();
   const auth = getAuth();
- 
-
   
   useEffect(() => {
     if (!canvasElementRef.current) return;
@@ -115,38 +89,40 @@ const Section4 = ({ canvasState, onCanvasUpdate }: Section4Props) => {
     });
 
     const loadCanvasState = async () => {
-      if (canvasState) {
-        try {
-          const jsonState = JSON.parse(canvasState); // Try to parse as JSON
-          canvas.loadFromJSON(jsonState, () => {
-            canvas.renderAll();
-          });
-        } catch (error) {
-          console.warn("Canvas state is not JSON, treating as Base64 image.");
-
-          // Clear existing canvas
-          canvas.clear();
-
+        if (canvasState) {
           try {
-            const img = await fabric.Image.fromURL(canvasState);
-            img.scaleToWidth(canvas.width || 300);
-            img.scaleToHeight(canvas.height || 300);
-            canvas.add(img);
-            canvas.renderAll();
+            const jsonState = JSON.parse(canvasState); // Try to parse as JSON
+            canvas.loadFromJSON(jsonState, () => {
+              canvas.renderAll();
+            });
           } catch (error) {
-            console.error("Failed to load image:", error);
+            console.warn("Canvas state is not JSON, treating as Base64 image.");
+  
+            // Clear existing canvas
+            canvas.clear();
+  
+            try {
+              const img = await fabric.Image.fromURL(canvasState);
+              img.scaleToWidth(canvas.width || 300);
+              img.scaleToHeight(canvas.height || 300);
+              canvas.add(img);
+              canvas.renderAll();
+            } catch (error) {
+              console.error("Failed to load image:", error);
+            }
           }
         }
-      }
-    };
+      };
+  
+      loadCanvasState(); // Call async function inside useEffect
+  
+      canvas.on("object:modified", () => {
+        if (onCanvasUpdate) {
+          onCanvasUpdate(JSON.stringify(canvas.toJSON()));
+        }
+      });
 
-    loadCanvasState(); // Call async function inside useEffect
-
-    canvas.on("object:modified", () => {
-      if (onCanvasUpdate) {
-        onCanvasUpdate(JSON.stringify(canvas.toJSON()));
-      }
-    });
+   
 
     canvas.add(brandText);
     brandTextRef.current = brandText;
@@ -159,7 +135,7 @@ const Section4 = ({ canvasState, onCanvasUpdate }: Section4Props) => {
      canvas.discardActiveObject();
       canvas.dispose();
     };
-  }, [canvasState]);
+  }, );
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -232,40 +208,50 @@ const Section4 = ({ canvasState, onCanvasUpdate }: Section4Props) => {
 };
 
 
-  const handleSaveToFirestore = async () => {
+const handleSaveToFirestore = async () => {
     if (!canvasRef.current || !auth.currentUser) return;
-
+  
     setSaving(true);
     const canvas = canvasRef.current;
     const user = auth.currentUser;
-
+  
     // Get the objects from the canvas and exclude the cardBase (fixed background)
     const filteredObjects = canvas.getObjects().filter((obj) => {
-      return !(obj as any).isCardBase && obj !== backgroundRef.current;
+      return obj !== cardBaseRef.current && obj !== backgroundRef.current;
     });
-
+  
     // Create a new JSON object for saving that does not include the cardBase
     const filteredJsonState = JSON.stringify({
       ...canvas.toJSON(),
-      objects: filteredObjects, // Only include the filtered objects
+      objects: filteredObjects,
     });
+  
     const previewImage = canvas.toDataURL({
-      format: "png", // specify the format as "png"
+      format: "png",
       quality: 1,
       multiplier: 1,
     });
+  
     try {
-      // Generate unique card ID
+      // Generate a unique card ID
       const cardId = uuidv4();
-
-      // Save the filtered card design to Firestore under users/{uid}/card_view/{docId}
-      await addDoc(collection(db, "users", user.uid, "card_view"), {
+  
+      // Check if the user is an admin
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      const isAdmin = userDoc.exists() && userDoc.data().isAdmin;
+  
+      // Choose collection based on user role
+      const collectionPath = isAdmin
+        ? "templates" // Admin templates
+        : `users/${user.uid}/card_view`; // User-specific cards
+  
+      await addDoc(collection(db, collectionPath), {
         id: cardId,
-        cardBase: filteredJsonState, // Save the filtered design as a string
-        previewImage: previewImage,
+        cardBase: filteredJsonState,
+        previewImage,
         createdAt: new Date().toISOString(),
       });
-
+  
       alert("Card saved successfully!");
     } catch (error) {
       console.error("Error saving card:", error);
@@ -274,6 +260,7 @@ const Section4 = ({ canvasState, onCanvasUpdate }: Section4Props) => {
       setSaving(false);
     }
   };
+  
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -325,10 +312,10 @@ const Section4 = ({ canvasState, onCanvasUpdate }: Section4Props) => {
         {saving ? "Загвар хадгалж байна..." : "Загвар хадгалах"}
       </button>
 
-      {/* Pass canvasRef to Toolbar */}
+      
       <Toolbar canvasRef={canvasRef} canvasRef2={canvasRef} currentSection="section4" />
     </div>
   );
 };
 
-export default Section4;
+export default Template;

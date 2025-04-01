@@ -6,11 +6,14 @@ import { getAuth } from "firebase/auth";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { BsImages, BsClipboardCheck } from "react-icons/bs";
 import * as fabric from "fabric";
+import { AiOutlineAppstore, AiOutlineFontSize } from "react-icons/ai";
+import TextToolbar from "./toolbar/TextToolbar";
 
 interface ToolbarProps {
   canvasRef: React.RefObject<fabric.Canvas | null>;
   canvasRef2: React.RefObject<fabric.Canvas | null>;
   currentSection: "section4" | "section5";
+  onTemplateApplied?: () => void;
 }
 
 interface DesignData {
@@ -27,7 +30,29 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
   const [isLoading, setIsLoading] = useState(false);
   const auth = getAuth();
   const db = getFirestore();
+  const [isTextSelected, setIsTextSelected] = useState(false);
 
+  useEffect(() => {
+    if (!canvasRef || !canvasRef.current) return; // Check for undefined or null
+  
+    const canvas = canvasRef.current;
+  
+    const handleSelection = () => {
+      const activeObject = canvas.getActiveObject();
+      setIsTextSelected(activeObject?.type === "text");
+    };
+  
+    canvas.on("selection:created", handleSelection);
+    canvas.on("selection:updated", handleSelection);
+    canvas.on("selection:cleared", () => setIsTextSelected(false));
+  
+    return () => {
+      canvas.off("selection:created", handleSelection);
+      canvas.off("selection:updated", handleSelection);
+      canvas.off("selection:cleared", () => setIsTextSelected(false));
+    };
+  }, [canvasRef]);
+  
   useEffect(() => {
     const fetchSavedDesigns = async () => {
       if (!auth.currentUser) return;
@@ -58,7 +83,19 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
             previewImage: doc.data().previewImage || "" // Directly use the preview image from Firestore
           }));
           allDesigns = [...allDesigns, ...cardWebDocs];
+        } else if (selectedTool === "templates") {
+         
+          const canvasDataSnapshot = await getDocs(collection(db, "templates"));
+          const templateDocs = canvasDataSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            designData: doc.data().cardBase, // Fix this
+            section: "section4" as const, // Templates apply to section4
+            previewImage: doc.data().previewImage || "",
+          }));
+          allDesigns = [...allDesigns, ...templateDocs];
         }
+        
+
 
         setDesigns(allDesigns);
       } catch (error) {
@@ -72,24 +109,23 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
   }, [auth.currentUser, selectedTool]);
 
   const handleDesignClick = (design: DesignData) => {
-    console.log("Selected Design Data:", design.designData);
-    console.log("Design Section:", design.section);
-    console.log("Current Section:", currentSection);
+    
   
-    if (design.section !== currentSection) {
+    if (design.section !== currentSection && !(selectedTool === "templates" && currentSection === "section4")) {
       console.log("Design section doesn't match current section. Not applying.");
       alert(
         `This design is for ${design.section === "section4" ? "Card View" : "Web View"} and cannot be applied to the current section.`
       );
+      
       return;
     }
-  
+    
     const targetCanvas = design.section === "section5" ? canvasRef2.current : canvasRef.current;
   
     if (targetCanvas && design.designData) {
       try {
         const parsedData = JSON.parse(design.designData);
-  
+        
         if (!parsedData || !parsedData.objects) {
           console.error("Invalid design data format", parsedData);
           return;
@@ -165,6 +201,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
                 }),
                 selectable: false,
                 evented: false,
+                isCardBase: true, 
               });
   
               const centerX = (targetCanvas.width || 0) / 2;
@@ -211,78 +248,107 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
       </button>
 
       <div className="flex h-full">
-        {/* Sidebar Icons */}
-        <div className="w-16 h-full flex flex-col items-center pt-6 border-r">
-          <div
-            className={`flex flex-col items-center justify-center p-3 cursor-pointer mb-4 ${
-              selectedTool === "gallery" ? "text-orange-500" : "text-gray-700 hover:text-gray-900"
-            }`}
-            onClick={() => setSelectedTool("gallery")}
-          >
-            <BsImages size={24} className="mb-1" />
-            <span className="text-xs text-center">Card View</span>
-          </div>
+       {/* Sidebar Icons */}
+<div className="w-16 h-full flex flex-col items-center pt-6 border-r">
 
-          <div
-            className={`flex flex-col items-center justify-center p-3 cursor-pointer ${
-              selectedTool === "webview" ? "text-orange-500" : "text-gray-700 hover:text-gray-900"
-            }`}
-            onClick={() => setSelectedTool("webview")}
-          >
-            <BsClipboardCheck size={24} className="mb-1" />
-            <span className="text-xs text-center">Web View</span>
-          </div>
-        </div>
+{/* Card View */}
+<div
+  className={`flex flex-col items-center justify-center p-3 cursor-pointer mb-4 ${
+    selectedTool === "gallery" ? "text-orange-500" : "text-gray-700 hover:text-gray-900"
+  }`}
+  onClick={() => setSelectedTool("gallery")}
+>
+  <BsImages size={24} className="mb-1" />
+  <span className="text-xs text-center">Card View</span>
+</div>
 
-        {/* Expanded View */}
-        {isExpanded && (
-          <div className="flex-1 p-4 overflow-y-auto relative z-20">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-sm text-gray-500">Loading previews...</p>
-              </div>
-            ) : designs.length === 0 ? (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-sm text-gray-500">No saved designs.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {designs.map((design) => (
-                  <div
-                    key={design.id}
-                    className={`cursor-pointer border p-2 rounded-md transition-colors relative z-10 ${
-                      design.section === currentSection 
-                        ? "hover:bg-gray-200" 
-                        : "opacity-50 hover:bg-red-100"
-                    }`}
-                    onClick={() => handleDesignClick(design)}
-                  >
-                    <div className="relative w-full h-24">
-                      {design.previewImage ? (
-                        <img
-                          src={design.previewImage}
-                          alt="Design preview"
-                          className="object-contain w-full h-full"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gray-200 flex items-center justify-center text-sm text-gray-500">
-                          No Preview
-                        </div>
-                      )}
-                    </div>
-                    <div className="mt-2 text-xs text-center truncate">
-                      Design {design.id.slice(0, 8)}
-                      <span className="block text-xs italic">
-                        {design.section === "section4" ? "(Card View)" : "(Web View)"}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+{/* Web View */}
+<div
+  className={`flex flex-col items-center justify-center p-3 cursor-pointer ${
+    selectedTool === "webview" ? "text-orange-500" : "text-gray-700 hover:text-gray-900"
+  }`}
+  onClick={() => setSelectedTool("webview")}
+>
+  <BsClipboardCheck size={24} className="mb-1" />
+  <span className="text-xs text-center">Web View</span>
+</div>
+
+{/* Templates */}
+<div
+  className={`flex flex-col items-center justify-center p-3 cursor-pointer ${
+    selectedTool === "templates" ? "text-orange-500" : "text-gray-700 hover:text-gray-900"
+  }`}
+  onClick={() => setSelectedTool("templates")}
+>
+  <AiOutlineAppstore size={24} className="mb-1" />
+  <span className="text-xs text-center">Templates</span>
+</div>
+
+{/* Text Toolbar (Always visible) */}
+<div
+  className={`flex flex-col items-center justify-center p-3 cursor-pointer mb-4 ${
+    selectedTool === "text" ? "text-orange-500" : "text-gray-700 hover:text-gray-900"
+  }`}
+  onClick={() => setSelectedTool("text")}
+>
+  <AiOutlineFontSize size={24} className="mb-1" />
+  <span className="text-xs text-center">Text</span>
+</div>
+
+</div>
+
+
+       {/* Expanded View */}
+{isExpanded && (
+  <div className="flex-1 p-4 overflow-y-auto relative z-20">
+    {selectedTool === "text" ? (
+      <TextToolbar canvasRef={canvasRef} />
+    ) : isLoading ? (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-sm text-gray-500">Loading previews...</p>
       </div>
+    ) : designs.length === 0 ? (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-sm text-gray-500">No saved designs.</p>
+      </div>
+    ) : (
+      <div className="space-y-3">
+        {designs.map((design) => (
+          <div
+            key={design.id}
+            className={`cursor-pointer border p-2 rounded-md transition-colors relative z-10 ${
+              design.section === currentSection 
+                ? "hover:bg-gray-200" 
+                : "opacity-50 hover:bg-red-100"
+            }`}
+            onClick={() => handleDesignClick(design)}
+          >
+            <div className="relative w-full h-24">
+              {design.previewImage ? (
+                <img
+                  src={design.previewImage}
+                  alt="Design preview"
+                  className="object-contain w-full h-full"
+                />
+              ) : (
+                <div className="w-full h-full bg-gray-200 flex items-center justify-center text-sm text-gray-500">
+                  No Preview
+                </div>
+              )}
+            </div>
+            <div className="mt-2 text-xs text-center truncate">
+              Design {design.id.slice(0, 8)}
+              <span className="block text-xs italic">
+                {design.section === "section4" ? "(Card View)" : "(Web View)"}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+)}
+    </div>
     </div>
   );
 };

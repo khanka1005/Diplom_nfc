@@ -1,87 +1,399 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as fabric from "fabric";
 import { getFirestore, collection, addDoc, doc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Toolbar from "./Toolbar";
+import {
+  BsPersonVcard,
+  BsPlus,
+  BsFacebook,
+  BsInstagram,
+  BsTwitter,
+  BsLinkedin,
+  BsYoutube,
+  BsTiktok,
+  BsPinterest,
+  BsSnapchat,
+  BsGithub,
+  BsWhatsapp,
+  BsPhone,
+  BsEnvelope,
+  BsChevronDown,
+  BsDownload,
+} from "react-icons/bs";
+import { FabricImage } from "fabric";
 
 type Section5Props = {
-  canvasState?: string; // Prop to receive canvas state (JSON or Base64)
-  onCanvasUpdate?: (state: string) => void; // Callback to send canvas updates to parent
+  canvasState?: string;
+  onCanvasUpdate?: (state: string) => void;
+};
+
+type SocialLink = {
+  platform: string;
+  url: string;
+  icon: React.ElementType;
 };
 
 const Section5 = ({ canvasState, onCanvasUpdate }: Section5Props) => {
   const canvasRef2 = useRef<fabric.Canvas | null>(null);
   const iphoneCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const profileFrameRef = useRef<fabric.Circle | null>(null);
-  const socialLinksRef = useRef<fabric.Text[]>([]);
-  const fabricCanvasRef = useRef<fabric.Canvas | null>(null); 
-  const [socialLinks, setSocialLinks] = useState({
-    Instagram: "",
-    Facebook: "",
-    Twitter: "",
+  const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
+
+  const [userInfo, setUserInfo] = useState({
+    name: "Your Name",
+    profession: "Your Profession",
+    phone: "",
+    email: "",
   });
 
-  const [tempLinks, setTempLinks] = useState(socialLinks);
+  // Social media icons mapping (for UI display in the form)
+  const socialIcons: { [key: string]: React.ElementType } = {
+    Facebook: BsFacebook,
+    Instagram: BsInstagram,
+    Twitter: BsTwitter,
+    LinkedIn: BsLinkedin,
+    YouTube: BsYoutube,
+    TikTok: BsTiktok,
+    Pinterest: BsPinterest,
+    Snapchat: BsSnapchat,
+    GitHub: BsGithub,
+    WhatsApp: BsWhatsapp,
+  };
+
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([
+    { platform: "Facebook", url: "", icon: BsFacebook },
+    { platform: "Instagram", url: "", icon: BsInstagram },
+    { platform: "Twitter", url: "", icon: BsTwitter },
+  ]);
+
+  const [otherSocialOptions] = useState([
+    "LinkedIn",
+    "YouTube",
+    "TikTok",
+    "Pinterest",
+    "Snapchat",
+    "GitHub",
+    "WhatsApp",
+  ]);
+
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
   const db = getFirestore();
   const auth = getAuth();
-  const bgRectRef = useRef<fabric.Rect | null>(null);
 
-  
-
-  // Load canvas state if provided via prop
+  // Load canvas state if provided
   useEffect(() => {
     if (!iphoneCanvasRef.current) return;
 
+    // Create the Fabric canvas
     const iphoneCanvas = new fabric.Canvas(iphoneCanvasRef.current, {
-      width: 300,
-        height: 800,
+      width: 250,
+      height: 800,
     });
+// Extend fabric.Object to include custom properties when saving to JSON
+fabric.Object.prototype.toObject = (function (toObject) {
+  return function (this: fabric.Object, ...args: any[]) {
+    const result = toObject.call(this, ...args);
+    return {
+      ...result,
+      url: (this as any).url,
+      phone: (this as any).phone,
+      email: (this as any).email,
+    };
+  };
+})(fabric.Object.prototype.toObject);
+
+
+    // Background rectangle
     const bgRect = new fabric.Rect({
       width: iphoneCanvas.width!,
       height: iphoneCanvas.height!,
-      fill: '#832626',
+      fill: "#fefdfd",
       selectable: false,
-      evented: false,
+      evented: false, 
     });
-    (bgRect as any).excludeFromExport = true;
-
+    (bgRect as any).excludeFromExport = true; // Not saved to JSON
     iphoneCanvas.add(bgRect);
-    
+
     canvasRef2.current = iphoneCanvas;
     fabricCanvasRef.current = iphoneCanvas;
-
+    
+    // Profile frame circle
     const profileFrame = new fabric.Circle({
       radius: 60,
-      fill: "#433b3bf",
-      left: 75,
-      top: 20,
+      fill: "#000000",
+      stroke: "#ffffff",
+      strokeWidth: 4,
+      left: 125,
+      top: 80,
+      originX: "center",
+      originY: "center",
       selectable: false,
       evented: false,
     });
     iphoneCanvas.add(profileFrame);
     profileFrameRef.current = profileFrame;
 
-    const introText = new fabric.Textbox("Your Introduction Here", {
-      left: 40,
-      top: 180,
+    // Name text
+    const nameText = new fabric.Textbox(userInfo.name, {
+      left: 125,
+      top: 160,
+      width: 200,
+      fontSize: 24,
+      fontWeight: "bold",
+      textAlign: "center",
+      originX: "center",
+      editable: true,
+    });
+    iphoneCanvas.add(nameText);
+
+    // Profession text
+    const professionText = new fabric.Textbox(userInfo.profession, {
+      left: 125,
+      top: 190,
       width: 200,
       fontSize: 16,
       textAlign: "center",
+      originX: "center",
       editable: true,
     });
-    iphoneCanvas.add(introText);
+    iphoneCanvas.add(professionText);
 
-    addSocialLinks(iphoneCanvas);
+    // Call button
+    const callButton = new fabric.Rect({
+      width: 100,
+      height: 40,
+      fill: "#4CAF50",
+      rx: 10,
+      ry: 10,
+      left: 30,
+      top: 230,
+      selectable: false,
+      evented: false,
+      phone: userInfo.phone,
+    });
+    callButton.set({ phone: userInfo.phone });
+    const callText = new fabric.Text("Call", {
+      left: 80,
+      top: 245,
+      fontSize: 16,
+      fill: "#fff",
+      originX: "center",
+      selectable: false,
+      evented: false,
+    });
 
-    // Load from canvasState prop if available
+    // Email button
+    const emailButton = new fabric.Rect({
+      width: 100,
+      height: 40,
+      fill: "#007bff",
+      rx: 10,
+      ry: 10,
+      left: 140,
+      top: 230,
+      selectable: false,
+      evented: false,
+      email: userInfo.email, 
+    });
+    emailButton.set({ email: userInfo.email });
+    const emailText = new fabric.Text("Email", {
+      left: 190,
+      top: 245,
+      fontSize: 16,
+      fill: "#fff",
+      originX: "center",
+      selectable: false,
+      evented: false,
+    });
+    // Add delete icon (small red "X" on top right)
+    
+
+    // On-click for call & email
+    callButton.on("mousedown", () => {
+      const phone = callButton.get("phone");
+      if (phone) window.open(`tel:${phone}`);
+    });
+    
+    emailButton.on("mousedown", () => {
+      const email = emailButton.get("email");
+      if (email) window.open(`mailto:${email}`);
+    });
+    
+    ;
+
+
+    // Load PNG for Facebook
+    async function loadFacebookIcon(canvas: fabric.Canvas) {
+      try {
+        // Pass an options object (even empty), which returns a Promise<FabricImage>
+        const fbImg = await FabricImage.fromURL("/fb.png", {
+          crossOrigin: "anonymous",
+        });
+        fbImg.scaleToWidth(40);
+        fbImg.scaleToHeight(40);
+        fbImg.set({
+          left: 40,
+          top: 300,
+          selectable: false,
+          evented: true,  
+
+
+          url: socialLinks.find((l) => l.platform === "Facebook")?.url || "",
+
+
+        });
+        iphoneCanvas.add(fbImg);
+
+        fbImg.on("mousedown", () => {
+          const link = socialLinks.find(
+            (l) => l.platform === "Facebook"
+          )?.url;
+          if (link) {
+            const normalized = link.startsWith("http")
+              ? link
+              : `https://${link}`;
+            window.open(normalized, "_blank");
+          }
+        });
+      }catch (err) {
+        console.error("Error loading /fb.png", err);
+      }
+    }
+    loadFacebookIcon(iphoneCanvas);
+
+    // Load PNG for Instagram
+     async function loadInstagramIcon(canvas: fabric.Canvas) {
+      try {
+        // Pass an options object (even empty), which returns a Promise<FabricImage>
+        const igImg = await FabricImage.fromURL("/ig.png", {
+          crossOrigin: "anonymous",
+        });
+        igImg.scaleToWidth(40);
+        igImg.scaleToHeight(40);
+        igImg.set({
+          left: 100,
+          top: 300,
+          selectable: false,
+          evented: true,
+          url: socialLinks.find((l) => l.platform === "Instagram")?.url || "",
+        });
+        iphoneCanvas.add(igImg);
+
+        igImg.on("mousedown", () => {
+          const link = socialLinks.find(
+            (l) => l.platform === "Instagram"
+          )?.url;
+          if (link) {
+            const normalized = link.startsWith("http")
+              ? link
+              : `https://${link}`;
+            window.open(normalized, "_blank");
+          }
+        });
+      }catch (err) {
+        console.error("Error loading /ig.png", err);
+      }
+    }
+    loadInstagramIcon(iphoneCanvas);
+
+    // Load PNG for Twitter
+    async function loadTwitterIcon(canvas: fabric.Canvas) {
+      try {
+        // Pass an options object (even empty), which returns a Promise<FabricImage>
+        const twitterImg = await FabricImage.fromURL("/twitter.jpg", {
+          crossOrigin: "anonymous",
+        });
+        twitterImg.scaleToWidth(40);
+        twitterImg.scaleToHeight(40);
+        twitterImg.set({
+          left: 160,
+          top: 300,
+          selectable: false,
+          evented: true,
+          url: socialLinks.find((l) => l.platform === "Twitter")?.url || "",
+        });
+        iphoneCanvas.add(twitterImg);
+
+        twitterImg.on("mousedown", () => {
+          const link = socialLinks.find(
+            (l) => l.platform === "Twitter"
+          )?.url;
+          if (link) {
+            const normalized = link.startsWith("http")
+              ? link
+              : `https://${link}`;
+            window.open(normalized, "_blank");
+          }
+        });
+      }catch (err) {
+        console.error("Error loading /fb.png", err);
+      }
+    }
+    loadTwitterIcon(iphoneCanvas);
+
+    // "Save Contact" button
+    const saveContactButton = new fabric.Rect({
+      width: 160,
+      height: 40,
+      fill: "#6c757d",
+      rx: 10,
+      ry: 10,
+      left: 125,
+      top: 360,
+      originX: "center",
+      selectable: false,
+      evented: true,
+    });
+    const saveContactText = new fabric.Text("Save Contact", {
+      left: 125,
+      top: 375,
+      fontSize: 16,
+      fill: "#fff",
+      originX: "center",
+      selectable: false,
+      evented: false,
+    });
+
+    saveContactButton.on("mousedown", () => {
+      const vcard = `BEGIN:VCARD
+VERSION:3.0
+FN:${userInfo.name}
+TITLE:${userInfo.profession}
+TEL:${userInfo.phone}
+EMAIL:${userInfo.email}
+END:VCARD`;
+
+      const blob = new Blob([vcard], { type: "text/vcard" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${userInfo.name}.vcf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // Add call/email/save objects to canvas
+    iphoneCanvas.add(
+      callButton,
+      callText,
+      emailButton,
+      emailText,
+      saveContactButton,
+      saveContactText
+    );
+    
+
+    // Load from canvasState if provided
     const loadCanvasState = async () => {
       if (canvasState) {
         try {
-          const parsedData = JSON.parse(canvasState); // Try parsing as JSON
+          const parsedData = JSON.parse(canvasState);
           iphoneCanvas.loadFromJSON(parsedData, () => {
             iphoneCanvas.renderAll();
           });
@@ -92,151 +404,203 @@ const Section5 = ({ canvasState, onCanvasUpdate }: Section5Props) => {
     };
     loadCanvasState();
 
+    // When object is modified, update parent
     iphoneCanvas.on("object:modified", () => {
       if (onCanvasUpdate) {
         onCanvasUpdate(JSON.stringify(iphoneCanvas.toJSON()));
       }
     });
+
+    // Bring objects to front after a short delay
     setTimeout(() => {
       iphoneCanvas.getObjects().forEach((obj) => {
-        iphoneCanvas.bringObjectToFront(obj); // Bring all objects to the front
+        iphoneCanvas.bringObjectToFront(obj);
       });
-      iphoneCanvas.sendObjectToBack(bgRect); // Send background to the back
+      iphoneCanvas.sendObjectToBack(bgRect);
       iphoneCanvas.renderAll();
     }, 100);
+
+    // Cleanup
     return () => {
       iphoneCanvas.dispose();
     };
-  }, [canvasState]);
+  }, [canvasState, socialLinks, userInfo, onCanvasUpdate]);
 
-  // Add social links to the canvas
-  const addSocialLinks = (canvas: fabric.Canvas) => {
-    socialLinksRef.current.forEach((link) => canvas.remove(link));
-    socialLinksRef.current = [];
+  // Handle user info changes & update canvas text
+  const handleUserInfoChange = (field: string, value: string) => {
+    setUserInfo((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
 
-    Object.entries(socialLinks).forEach(([name, url], index) => {
-      const linkText = new fabric.Text(name, {
-        left: 80,
-        top: 250 + index * 30,
-        fontSize: 16,
-        fill: "#000",
-        fontWeight: "bold",
-        selectable: false,
-        evented: true,
-      });
-
-      linkText.on("mouseup", () => {
-        if (url) {
-          const formattedUrl = url.startsWith("http") ? url : `https://${url}`;
-          window.open(formattedUrl, "_blank");
-          toast.info(`Opening ${name} link...`);
-        } else {
-          toast.warning(`No URL provided for ${name}`);
+    // Reflect changes on canvas textboxes
+    const canvas = fabricCanvasRef.current;
+    if (canvas) {
+      const objects = canvas.getObjects();
+      if (field === "name") {
+        const nameText = objects.find(
+          (obj) =>
+            obj.type === "textbox" && (obj as fabric.Textbox).text === userInfo.name
+        ) as fabric.Textbox | undefined;
+        if (nameText) {
+          nameText.set({ text: value });
         }
-      });
+      } else if (field === "profession") {
+        const professionText = objects.find(
+          (obj) =>
+            obj.type === "textbox" &&
+            (obj as fabric.Textbox).text === userInfo.profession
+        ) as fabric.Textbox | undefined;
+        if (professionText) {
+          professionText.set({ text: value });
+        }
+      }
+      canvas.renderAll();
+    }
+  };
 
-      canvas.add(linkText);
-      socialLinksRef.current.push(linkText);
-    });
+  // Handle social link changes
+  const handleSocialLinkChange = (index: number, field: string, value: string) => {
+    const newLinks = [...socialLinks];
+    if (field === "platform") {
+      newLinks[index].platform = value;
+      newLinks[index].icon = socialIcons[value];
+    } else {
+      newLinks[index].url = value;
+    }
+    setSocialLinks(newLinks);
+  };
 
-    canvas.renderAll();
+  // Add new social link
+  const handleAddSocialLink = (platform: string) => {
+    if (socialLinks.length < 6) {
+      setSocialLinks([
+        ...socialLinks,
+        {
+          platform,
+          url: "",
+          icon: socialIcons[platform],
+        },
+      ]);
+      setDropdownOpen(false);
+    } else {
+      toast.warning("Maximum 6 social links allowed");
+    }
+  };
+
+  // Remove social link
+  const handleRemoveSocialLink = (index: number) => {
+    // Disallow removing the first 3 (the main ones)
+    if (index < 3) {
+      toast.warning("Cannot remove primary social links");
+      return;
+    }
+    const newLinks = [...socialLinks];
+    newLinks.splice(index, 1);
+    setSocialLinks(newLinks);
   };
 
   // Handle image upload
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
+  
     const canvas = fabricCanvasRef.current;
     if (!canvas || !profileFrameRef.current) return;
-
+  
     const reader = new FileReader();
     reader.onload = (e) => {
       if (!e.target?.result) return;
-
-      fabric.Image.fromURL(e.target.result as string, {
-        crossOrigin: "anonymous",
-      }).then((img) => {
-        img.scaleToWidth(140);
-        img.scaleToHeight(140);
+  
+      fabric.Image.fromURL(e.target.result as string, { crossOrigin: "anonymous" }).then((img) => {
+        img.scaleToWidth(120);
+        img.scaleToHeight(120);
         img.set({
           left: profileFrameRef.current!.left,
           top: profileFrameRef.current!.top,
+          originX: "center",
+          originY: "center",
           clipPath: new fabric.Circle({
+            left: profileFrameRef.current!.left,
+            top: profileFrameRef.current!.top,
             radius: 60,
-            left: 75,
-            top: 20,
+            originX: "center",
+            originY: "center",
             absolutePositioned: true,
           }),
+          hasControls: true,
+          hasBorders: false,
+          selectable: true,
         });
-
+  
+        // Add a custom delete control to the image
+        img.controls.deleteControl = new fabric.Control({
+          x: 0.5,
+          y: -0.5,
+          offsetY: -10,
+          offsetX: 10,
+          cursorStyle: 'pointer',
+          mouseUpHandler: (eventData, transform) => {
+            canvas.remove(transform.target);
+            canvas.requestRenderAll();
+            return true;
+          },
+          render: (ctx, left, top, styleOverride, fabricObject) => {
+            const size = 16;
+            ctx.save();
+            ctx.translate(left, top);
+            ctx.fillStyle = '#ff4d4d';
+            ctx.beginPath();
+            ctx.arc(0, 0, size / 2, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.fillStyle = 'white';
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('✕', 0, 1);
+            ctx.restore();
+          },
+          
+        });
+  
         canvas.add(img);
+        canvas.setActiveObject(img);
         canvas.renderAll();
+  
         toast.success("Profile image uploaded successfully!");
       });
     };
     reader.readAsDataURL(file);
   };
+  
+  
 
-  // Handle social links save
-  const handleSaveLinks = () => {
-    setSocialLinks(tempLinks);
-    if (fabricCanvasRef.current) {
-      addSocialLinks(fabricCanvasRef.current);
-      toast.success("Links saved successfully!");
-    }
-  };
-
-  // Sync canvas to web (Firestore)
+  // Save to Firestore
   const handleSyncToWeb = async () => {
     if (!canvasRef2.current) return;
-    const canvas=canvasRef2.current;
-    // Generate the JSON representation of the canvas
-    const json = canvasRef2.current.toJSON();
+    const canvas = canvasRef2.current;
+  
+    const json = canvas.toJSON();
     if (!json) {
       toast.error("Failed to generate canvas JSON");
       return;
     }
   
-    // Log the JSON object for debugging
-    console.log("Canvas JSON:", json);
-  
-    // Ensure the JSON object is valid and does not contain undefined values
     const sanitizedJson = {
       version: json.version,
       objects: json.objects.filter((obj: any) => !obj.excludeFromExport),
     };
- // Remove undefined values
   
-    // Log the sanitized JSON object for debugging
-    console.log("Sanitized Canvas JSON:", sanitizedJson);
-  
-    // Validate socialLinks
-    const sanitizedSocialLinks = { ...socialLinks };
-    Object.keys(sanitizedSocialLinks).forEach((key) => {
-      if (sanitizedSocialLinks[key as keyof typeof socialLinks] === undefined) {
-        sanitizedSocialLinks[key as keyof typeof socialLinks] = ""; // Replace undefined with an empty string
-      }
-    });
-  
-    // Log the sanitized socialLinks for debugging
-    console.log("Sanitized Social Links:", sanitizedSocialLinks);
-
-
     const previewImage = canvas.toDataURL({
-      format: "png", // specify the format as "png"
+      format: "png",
       quality: 1,
       multiplier: 1,
     });
-
-    
-    // Call the onCanvasUpdate callback if provided
+  
     if (onCanvasUpdate) {
-      const updatedState = JSON.stringify(sanitizedJson);
-      onCanvasUpdate(updatedState);
+      onCanvasUpdate(JSON.stringify(sanitizedJson));
     }
   
-    // Save to Firestore under user ID
     try {
       const user = auth.currentUser;
       if (!user) {
@@ -245,25 +609,34 @@ const Section5 = ({ canvasState, onCanvasUpdate }: Section5Props) => {
       }
   
       const userRef = doc(db, "users", user.uid);
-      await addDoc(collection(userRef, "card_web"), {
+  
+      const payload = {
         userId: user.uid,
         timestamp: new Date(),
-        socialLinks: sanitizedSocialLinks, // Use sanitized socialLinks
-        canvasData: JSON.stringify(sanitizedJson), // Ensure canvasData is a string
-        previewImage: previewImage,
-      });
+        userInfo,
+        socialLinks: socialLinks.map(({ platform, url }) => ({ platform, url })),
+        canvasData: JSON.stringify(sanitizedJson),
+        previewImage,
+      };
   
-      toast.success("Canvas and links saved under user ID in Firestore!");
+      await addDoc(collection(userRef, "card_web"), payload);
+      const publicRef = await addDoc(collection(db, "card_public"), payload);
+  
+      const shareUrl = `${window.location.origin}/card-view/${publicRef.id}`;
+  
+      toast.success(`Card saved! Ready to write to NFC:\n${shareUrl}`);
+      console.log("NFC Link:", shareUrl);
     } catch (error) {
       console.error("Error saving to Firestore:", error);
       toast.error("Failed to save data.");
     }
   };
-
+  
   return (
-    <div className="flex w-[80vw] h-[500px] justify-center items-center gap-6 mb-30 mt-30">
+    <div className="flex w-[80vw] min-h-screen justify-center items-center gap-6 md:flex-row flex-col items-start my-8 px-4 overflow-y-auto">
       <ToastContainer position="bottom-right" autoClose={3000} hideProgressBar={false} />
 
+      {/* iPhone preview */}
       <div
         className="relative w-[300px] h-[650px] rounded-[40px] overflow-hidden"
         style={{
@@ -273,32 +646,151 @@ const Section5 = ({ canvasState, onCanvasUpdate }: Section5Props) => {
         }}
       >
         <div className="absolute inset-0 flex justify-center items-center p-6">
-        <div className="w-[290px] h-[550px] overflow-y-auto rounded-[30px] shadow-inner bg-white relative z-0">
-    <canvas ref={iphoneCanvasRef} width={300} height={800} />
-</div>
-
+          <div className="w-[290px] h-[550px] overflow-y-auto rounded-[30px] shadow-inner bg-white relative z-0">
+            <canvas ref={iphoneCanvasRef} width={250} height={800} />
+          </div>
         </div>
       </div>
 
-      <div className="w-[25%] flex flex-col items-center p-6 border-l-2 border-gray-300">
-        <h2 className="text-lg font-semibold mb-4">Upload & Links</h2>
+      {/* Form controls */}
+      <div className="w-full md:w-[400px] flex flex-col gap-4 p-6 bg-white rounded-lg shadow-md">
+        <h2 className="text-xl font-bold mb-2">Customize Your Business Card</h2>
 
-        <input type="file" accept="image/*" onChange={handleImageUpload} className="border p-2 rounded-md cursor-pointer mb-4 w-full" />
+        {/* Profile image upload */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">Profile Image</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="w-full border p-2 rounded-md cursor-pointer"
+          />
+        </div>
 
-        {Object.keys(socialLinks).map((key) => (
-          <div key={key} className="flex flex-col gap-1">
-            <label className="text-sm font-medium">{key} URL</label>
-            <input
-              type="text"
-              value={tempLinks[key as keyof typeof socialLinks]}
-              onChange={(e) => setTempLinks({ ...tempLinks, [key]: e.target.value })}
-              className="border p-2 rounded-md w-full"
-            />
+        {/* Basic info */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">Name</label>
+          <input
+            type="text"
+            value={userInfo.name}
+            onChange={(e) => handleUserInfoChange("name", e.target.value)}
+            className="w-full border p-2 rounded-md"
+            placeholder="Your Name"
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">Profession</label>
+          <input
+            type="text"
+            value={userInfo.profession}
+            onChange={(e) => handleUserInfoChange("profession", e.target.value)}
+            className="w-full border p-2 rounded-md"
+            placeholder="Your Profession"
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">Phone Number</label>
+          <input
+            type="tel"
+            value={userInfo.phone}
+            onChange={(e) => handleUserInfoChange("phone", e.target.value)}
+            className="w-full border p-2 rounded-md"
+            placeholder="Your Phone Number"
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">Email</label>
+          <input
+            type="email"
+            value={userInfo.email}
+            onChange={(e) => handleUserInfoChange("email", e.target.value)}
+            className="w-full border p-2 rounded-md"
+            placeholder="Your Email"
+          />
+        </div>
+
+        {/* Social links */}
+        <div className="mb-4">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="font-medium">Social Links</h3>
+            <div className="relative">
+              <button
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="flex items-center gap-1 bg-blue-500 text-white py-1 px-2 rounded-md text-sm"
+              >
+                <BsPlus size={16} /> Add Social <BsChevronDown size={12} />
+              </button>
+
+              {dropdownOpen && (
+                <div className="absolute right-0 mt-1 bg-white border rounded-md shadow-lg z-10 w-40">
+                  {otherSocialOptions.map((platform) => (
+                    <button
+                      key={platform}
+                      onClick={() => handleAddSocialLink(platform)}
+                      className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                    >
+                      {platform}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        ))}
-        <button onClick={handleSaveLinks} className="bg-gray-800 text-white px-4 py-2 rounded-md mt-2 w-80">Линк хадгалах</button>
-        <button onClick={handleSyncToWeb} className="bg-gray-800 text-white px-4 py-2 rounded-md mt-2 w-80">Загвар хадгалах</button>
+
+          {/* The first 3 are mandatory (Facebook, Instagram, Twitter) */}
+          <div className="flex gap-2 mb-4">
+            {socialLinks.slice(0, 3).map((link, index) => (
+              <div key={index} className="flex flex-col items-center">
+                <div className="bg-gray-100 p-3 rounded-full mb-1">
+                  {React.createElement(link.icon, { size: 24 })}
+                </div>
+                <input
+                  type="text"
+                  value={link.url}
+                  onChange={(e) => handleSocialLinkChange(index, "url", e.target.value)}
+                  className="border p-2 rounded-md w-full text-sm"
+                  placeholder={`${link.platform} URL`}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Additional social links (index >= 3) */}
+          {socialLinks.slice(3).map((link, index) => (
+            <div key={index + 3} className="flex gap-2 mb-2 items-center">
+              <div className="bg-gray-100 p-2 rounded-full">
+                {React.createElement(link.icon, { size: 16 })}
+              </div>
+              <input
+                type="text"
+                value={link.url}
+                onChange={(e) => handleSocialLinkChange(index + 3, "url", e.target.value)}
+                className="border p-2 rounded-md flex-1"
+                placeholder={`${link.platform} URL`}
+              />
+              <button
+                onClick={() => handleRemoveSocialLink(index + 3)}
+                className="bg-red-500 text-white py-1 px-2 rounded-md"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Save button */}
+        <button
+          onClick={handleSyncToWeb}
+          className="bg-gray-800 text-white py-3 px-4 rounded-md mt-2 w-full flex items-center justify-center gap-2"
+        >
+          <BsPersonVcard size={16} /> Загвар хадгалах
+        </button>
       </div>
+
+      {/* Reuse your existing Toolbar if needed */}
       <Toolbar canvasRef={canvasRef2} canvasRef2={canvasRef2} currentSection="section5" />
     </div>
   );

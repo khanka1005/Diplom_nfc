@@ -29,6 +29,12 @@ const Sidebar = () => {
           >
             ⏳ Pending Cards
           </Link>
+          <Link 
+            href="/dashboard/template" 
+            className={`p-3 rounded ${pathname === "/dashboard/template" ? "bg-gray-200" : "hover:bg-gray-100"}`}
+          >
+            Template
+          </Link>
         </nav>
       </div>
 
