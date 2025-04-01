@@ -1,13 +1,13 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import {
   initializeFirestore,
-  getFirestore,
   persistentLocalCache,
   persistentMultipleTabManager,
 } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getAnalytics } from "firebase/analytics";
 
+// 🔐 Firebase Config
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -18,32 +18,30 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase App
+// ✅ Initialize Firebase App
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-// ✅ Only initialize Firestore with cache once
+// ✅ Firestore with Delayed Initialization (Only in Browser)
 let firestoreInstance;
 
 export const getFirestoreClient = () => {
-  if (!firestoreInstance) {
-    // Make sure Firestore is initialized with persistence only once
+  if (!firestoreInstance && typeof window !== "undefined") {
     firestoreInstance = initializeFirestore(app, {
       localCache: persistentLocalCache({
         tabManager: persistentMultipleTabManager(),
       }),
     });
   }
-
   return firestoreInstance;
 };
 
-// ✅ Auth (browser only)
+// ✅ Auth (Browser Only)
 export const getAuthClient = () => {
   if (typeof window === "undefined") throw new Error("Must be used in browser");
   return getAuth(app);
 };
 
-// ✅ Analytics
+// ✅ Analytics (Optional)
 export const getAnalyticsClient = () => {
   if (typeof window === "undefined") return null;
   return getAnalytics(app);

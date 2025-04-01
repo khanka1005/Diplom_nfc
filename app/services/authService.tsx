@@ -23,3 +23,4 @@ export const registerUser = async (name: string, email: string, password: string
 
   return user;
 };
+  

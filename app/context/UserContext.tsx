@@ -26,15 +26,16 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-
+  
     const auth = getAuthClient();
-    const db = getFirestoreClient();
-
+  
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      const db = getFirestoreClient(); // ✅ Moved inside callback
+  
       if (currentUser) {
         setUser(currentUser);
         setUserName("Loading...");
-
+  
         try {
           const userRef = doc(db, "users", currentUser.uid);
           const userSnap = await getDoc(userRef);
@@ -47,12 +48,13 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(null);
         setUserName(null);
       }
-
-      setAuthLoading(false); // ✅ auth check finished
+  
+      setAuthLoading(false); // ✅ after all is done
     });
-
+  
     return () => unsubscribe();
   }, []);
+  
 
   return (
     <UserContext.Provider value={{ user, userName, setUserName, authLoading }}>
