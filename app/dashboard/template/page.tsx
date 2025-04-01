@@ -1,8 +1,12 @@
 // app/dashboard/template/page.tsx
-"use client";
+import dynamic from 'next/dynamic';
+import React from 'react';
 
-import React from "react";
-import Template from "./template";
+// Dynamically import the Template component with SSR disabled
+const Template = dynamic(() => import('./template'), {
+  ssr: false,
+  loading: () => <p>Loading...</p>,
+});
 
 const Page = () => {
   return <Template />;
