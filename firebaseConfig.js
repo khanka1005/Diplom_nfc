@@ -15,10 +15,12 @@ const firebaseConfig = {
 
 // ✅ Ensure Firebase is only initialized once
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const auth = getAuth(app);
 
-const auth = typeof window !== "undefined" ? getAuth(app) : null;
-const provider = typeof window !== "undefined" ? new GoogleAuthProvider() : null;
-const db = typeof window !== "undefined" ? getFirestore(app) : null;
+const provider = new GoogleAuthProvider();
+const db = getFirestore(app);
+
+// Only get analytics on the client
 const analytics = typeof window !== "undefined" ? getAnalytics(app) : null;
 
 export { auth, provider, db, analytics, app };

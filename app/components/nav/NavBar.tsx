@@ -12,12 +12,13 @@ const NavBar = () => {
   const router = useRouter();
 
   const handleLogout = async () => {
-    if (typeof window === "undefined" || !auth) return;
+    if (typeof window === "undefined") return;
   
-    await signOut(auth);
+    await signOut(auth); // ✅ Now safe — auth is never null
     setUserName(null);
     router.push("/");
   };
+  
   
 
   return (
