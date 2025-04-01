@@ -2,8 +2,9 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import * as fabric from "fabric";
-import { getFirestore, collection, addDoc, doc } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import {  collection, addDoc, doc } from "firebase/firestore";
+
+import { getAuthClient, getFirestoreClient } from "@/firebaseConfig";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Toolbar from "./Toolbar";
@@ -80,8 +81,8 @@ const Section5 = ({ canvasState, onCanvasUpdate }: Section5Props) => {
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  const db = getFirestore();
-  const auth = getAuth();
+  const auth = getAuthClient();
+  const db = getFirestoreClient();
 
   // Load canvas state if provided
   useEffect(() => {

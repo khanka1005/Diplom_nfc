@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getFirestore, collection, getDocs } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import {  collection, getDocs } from "firebase/firestore";
+
+import { getAuthClient, getFirestoreClient } from "@/firebaseConfig";
+
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { BsImages, BsClipboardCheck } from "react-icons/bs";
 import * as fabric from "fabric";
@@ -28,8 +30,8 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedTool, setSelectedTool] = useState<string>("gallery");
   const [isLoading, setIsLoading] = useState(false);
-  const auth = getAuth();
-  const db = getFirestore();
+  const auth = getAuthClient();
+  const db = getFirestoreClient();
   const [, setIsTextSelected] = useState(false);
 
   useEffect(() => {
