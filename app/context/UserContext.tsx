@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { getAuthClient, getFirestoreClient } from "@/firebaseConfig";
+import { browserLocalPersistence, setPersistence } from "firebase/auth";
 
 // Define User Context Type
 interface UserContextType {
@@ -27,27 +28,30 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const auth = getAuthClient();
     const db = getFirestoreClient();
-
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        setUserName("Loading...");
-
-        try {
-          const userRef = doc(db, "users", currentUser.uid);
-          const userSnap = await getDoc(userRef);
-          setUserName(userSnap.exists() ? userSnap.data().name : "User");
-        } catch (err) {
-          console.error("Failed to fetch user name:", err);
-          setUserName("User");
+    
+    setPersistence(auth, browserLocalPersistence).then(() => {
+      const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+        console.log("[🔐 AUTH STATE] User is:", currentUser);
+  
+        if (currentUser) {
+          setUser(currentUser);
+          setUserName("Loading...");
+  
+          try {
+            const userRef = doc(db, "users", currentUser.uid);
+            const userSnap = await getDoc(userRef);
+            setUserName(userSnap.exists() ? userSnap.data().name : "User");
+          } catch (err) {
+            console.error("Failed to fetch user name:", err);
+          }
+        } else {
+          setUser(null);
+          setUserName(null);
         }
-      } else {
-        setUser(null);
-        setUserName(null);
-      }
+      });
+  
+      return () => unsubscribe();
     });
-
-    return () => unsubscribe();
   }, []);
 
   return (
