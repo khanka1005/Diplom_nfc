@@ -1,6 +1,8 @@
+// app/dashboard/template/page.tsx
+"use client";
 
 import React from "react";
-import Template from "@/app/dashboard/components/template"; // Move Template to a separate component file
+import Template from "./template";
 
 const Page = () => {
   return <Template />;
