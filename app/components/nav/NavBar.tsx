@@ -2,21 +2,25 @@
 
 import Link from "next/link";
 import { useUser } from "@/app/context/UserContext";
-import { signOut } from "firebase/auth";
-import { auth } from "@/firebaseConfig";
 import { useRouter } from "next/navigation";
 import { FiLogOut } from "react-icons/fi";
 
+import { getAuthClient } from "@/firebaseConfig";
+import { signOut } from "firebase/auth";
 const NavBar = () => {
   const { user, userName, setUserName } = useUser(); // Access setUserName
   const router = useRouter();
 
-  const handleLogout = async () => {
-    if (typeof window === "undefined") return;
   
-    await signOut(auth); // ✅ Now safe — auth is never null
-    setUserName(null);
-    router.push("/");
+  const handleLogout = async () => {
+    try {
+      const auth = getAuthClient(); // ✅ Now safe
+      await signOut(auth);
+      setUserName(null);
+      router.push("/");
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
   };
   
   

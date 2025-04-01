@@ -1,6 +1,8 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+
+// ✅ These must only be used on the client
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
@@ -10,17 +12,24 @@ const firebaseConfig = {
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// ✅ Ensure Firebase is only initialized once
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
 
-const provider = new GoogleAuthProvider();
-const db = getFirestore(app);
+// ❌ Do NOT export auth directly
+// ✅ Use functions to access auth and analytics (client-only)
+export const getAuthClient = () => {
+  if (typeof window === "undefined") throw new Error("auth can only be used on the client");
+  return getAuth(app);
+};
 
-// Only get analytics on the client
-const analytics = typeof window !== "undefined" ? getAnalytics(app) : null;
+export const getAnalyticsClient = () => {
+  if (typeof window === "undefined") return null;
+  return getAnalytics(app);
+};
 
-export { auth, provider, db, analytics, app };
+// These are safe on both client & server
+export const db = getFirestore(app);
+export const provider = new GoogleAuthProvider();
+export { app };
