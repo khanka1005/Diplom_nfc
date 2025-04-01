@@ -1,33 +1,25 @@
 import { getAuthClient, getFirestoreClient } from "@/firebaseConfig";
-
-
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-const auth = getAuthClient();
-const db = getFirestoreClient();
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+
 export const loginUser = async (email: string, password: string) => {
-  try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    return userCredential.user;
-  } catch  {
-    throw new Error("Login failed. Please check your credentials.");
-  }
+  const auth = getAuthClient(); // ✅ safe in browser
+  const userCredential = await signInWithEmailAndPassword(auth, email, password);
+  return userCredential.user;
 };
 
 export const registerUser = async (name: string, email: string, password: string) => {
-  try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+  const auth = getAuthClient();
+  const db = getFirestoreClient();
 
-    // Store user data in Firestore
-    await setDoc(doc(db, "users", user.uid), {
-      name,
-      email,
-      isAdmin: false,
-    });
+  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+  const user = userCredential.user;
 
-    return user;
-  } catch  {
-    throw new Error("Registration failed. Try again.");
-  }
+  await setDoc(doc(db, "users", user.uid), {
+    name,
+    email,
+    isAdmin: false,
+  });
+
+  return user;
 };
