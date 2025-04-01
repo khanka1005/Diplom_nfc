@@ -222,11 +222,18 @@ const handleSaveToFirestore = async () => {
 
   const canvas = canvasRef.current;
 
+  // ✅ Debugging auth state
+  onAuthStateChanged(auth, (user) => {
+    console.log("🔥 onAuthStateChanged:", user);
+    console.log("📌 Inside callback auth.currentUser:", auth.currentUser);
+  });
+  console.log("⚠️ Outside callback auth.currentUser:", auth.currentUser);
+
   const unsubscribe = onAuthStateChanged(auth, async (user) => {
     unsubscribe(); // prevent double calls
 
     if (!user) {
-      console.warn("User not authenticated.");
+      console.warn("❌ User not authenticated.");
       setSaving(false);
       return;
     }
@@ -263,13 +270,14 @@ const handleSaveToFirestore = async () => {
 
       alert("Card saved successfully!");
     } catch (err) {
-      console.error("Firestore error:", err);
+      console.error("❌ Firestore error:", err);
       alert("Failed to save card.");
     } finally {
       setSaving(false);
     }
   });
 };
+
 
   
 
