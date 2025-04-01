@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useUser } from "@/app/context/UserContext";
 import { signOut } from "firebase/auth";
-import { auth } from "@/firebaseConfig";
+import { getAuthClient } from "@/firebaseConfig";
 import { useRouter } from "next/navigation";
 import { FiLogOut } from "react-icons/fi";
 
@@ -12,11 +12,14 @@ const NavBar = () => {
   const router = useRouter();
 
   const handleLogout = async () => {
-    if (typeof window === "undefined" || !auth) return; // ✅ ensure auth is not null
-  
-    await signOut(auth); // ✅ auth is now guaranteed to be type Auth
-    setUserName(null);
-    router.push("/");
+    try {
+      const auth = getAuthClient(); // ✅ Access safely on the client
+      await signOut(auth);
+      setUserName(null);
+      router.push("/");
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
   };
   
   
