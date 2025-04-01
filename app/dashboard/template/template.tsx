@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as fabric from "fabric";
-import { getFirestore, collection, addDoc,getDoc, doc } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import {  collection, addDoc,getDoc, doc } from "firebase/firestore";
+
+import { getAuthClient, getFirestoreClient } from "@/firebaseConfig";
 import { v4 as uuidv4 } from "uuid";
 import Toolbar from "@/app/components/ContentSection/Toolbar";
 
@@ -19,8 +20,8 @@ const Template = ({ canvasState, onCanvasUpdate }: Section4Props) => {
   const backgroundRef = useRef<fabric.Rect | null>(null);
 
   const [saving, setSaving] = useState(false);
-  const db = getFirestore();
-  const auth = getAuth();
+  const auth = getAuthClient();
+  const db = getFirestoreClient();
   
   useEffect(() => {
     if (!canvasElementRef.current) return;
