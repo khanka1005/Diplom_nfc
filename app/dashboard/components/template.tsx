@@ -20,10 +20,10 @@ const Template = ({ canvasState, onCanvasUpdate }: Section4Props) => {
   const backgroundRef = useRef<fabric.Rect | null>(null);
 
   const [saving, setSaving] = useState(false);
-  const auth = getAuthClient();
-  const db = getFirestoreClient();
+  
   
   useEffect(() => {
+    
     if (!canvasElementRef.current) return;
 
     const canvas = new fabric.Canvas(canvasElementRef.current, {
@@ -42,6 +42,7 @@ const Template = ({ canvasState, onCanvasUpdate }: Section4Props) => {
     selectable: false,
     evented: false,
   });
+  
 
     // Create the rounded card base
     const cardBase = new fabric.Rect({
@@ -137,6 +138,8 @@ const Template = ({ canvasState, onCanvasUpdate }: Section4Props) => {
       canvas.dispose();
     };
   }, );
+  const auth = getAuthClient();
+  const db = getFirestoreClient();
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
