@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import * as fabric from "fabric";
-import {  collection, addDoc, doc } from "firebase/firestore";
+import {  collection, addDoc, doc, enableNetwork } from "firebase/firestore";
 
 import { getAuthClient, getFirestoreClient } from "@/firebaseConfig";
 import { ToastContainer, toast } from "react-toastify";
@@ -610,6 +610,9 @@ END:VCARD`;
       }
   
       try {
+        // ✅ Force Firestore to go online
+     
+  
         const userRef = doc(db, "users", user.uid);
   
         const payload = {

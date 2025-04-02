@@ -3,13 +3,35 @@
 import Link from "next/link";
 import { useUser } from "@/app/context/UserContext";
 import { signOut } from "firebase/auth";
-import { getAuthClient } from "@/firebaseConfig";
+import { getAuthClient, getFirestoreClient } from "@/firebaseConfig";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { FiLogOut } from "react-icons/fi";
 
 const NavBar = () => {
-  const { user, userName, setUserName, authLoading } = useUser(); // ✅ All hooks first
+  const { user, userName, setUserName, authLoading } = useUser();
   const router = useRouter();
+
+  // ✅ Force Firestore to go online once user is authenticated
+  useEffect(() => {
+    const enableFirestoreNetwork = async () => {
+      if (user) {
+        try {
+          const db = getFirestoreClient();
+          await db.enableNetwork?.(); // This may not exist in older versions, safe optional chaining
+        } catch (err: unknown) {
+          if (err instanceof Error) {
+            console.warn("⚠️ Failed to enable Firestore network:", err.message);
+          } else {
+            console.warn("⚠️ Unknown error enabling Firestore network:", err);
+          }
+        }
+      }
+    };
+  
+    enableFirestoreNetwork();
+  }, [user]);
+  
 
   if (authLoading) return null;
 

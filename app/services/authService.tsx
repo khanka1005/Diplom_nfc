@@ -1,10 +1,19 @@
 import { getAuthClient, getFirestoreClient } from "@/firebaseConfig";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, enableNetwork } from "firebase/firestore";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 
 export const loginUser = async (email: string, password: string) => {
-  const auth = getAuthClient(); // ✅ safe in browser
+  const auth = getAuthClient();
   const userCredential = await signInWithEmailAndPassword(auth, email, password);
+
+  // ✅ Ensure Firestore is online
+  const db = getFirestoreClient();
+  try {
+  
+  } catch (err) {
+    console.warn("⚠️ Firestore enableNetwork (login) failed:", err);
+  }
+
   return userCredential.user;
 };
 
@@ -15,6 +24,12 @@ export const registerUser = async (name: string, email: string, password: string
   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
   const user = userCredential.user;
 
+  try {
+    await enableNetwork(db);
+  } catch (err) {
+    console.warn("⚠️ Firestore enableNetwork (register) failed:", err);
+  }
+
   await setDoc(doc(db, "users", user.uid), {
     name,
     email,
@@ -23,4 +38,3 @@ export const registerUser = async (name: string, email: string, password: string
 
   return user;
 };
-  

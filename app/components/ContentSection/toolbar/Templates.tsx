@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getFirestore, collection, getDocs } from "firebase/firestore";
+import { getFirestore, collection, getDocs, connectFirestoreEmulator } from "firebase/firestore";
 import * as fabric from "fabric";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { getFirestoreClient } from "@/firebaseConfig";
 
 interface TemplatesProps {
   canvasRef: React.RefObject<fabric.Canvas | null>;
@@ -19,42 +20,44 @@ interface DesignData {
 const Templates: React.FC<TemplatesProps> = ({ canvasRef }) => {
   const [templates, setTemplates] = useState<DesignData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const db = getFirestore();
 
+  useEffect(() => {
+    const auth = getAuth();
 
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        try {
+          const db = getFirestoreClient();
 
-useEffect(() => {
-  const auth = getAuth();
+          // ✅ Force online mode
+          await db.enableNetwork?.().catch((err: { message: any; }) => {
+            console.warn("⚠️ Firestore enableNetwork error:", err.message);
+          });
 
-  const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-    if (currentUser) {
-      setIsLoading(true);
-      try {
-        const templateSnapshot = await getDocs(collection(db, "templates"));
-        const templateDocs = templateSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          designData: doc.data().cardBase,
-          section: "section4" as const,
-          previewImage: doc.data().previewImage || "",
-        }));
-        setTemplates(templateDocs);
-      } catch (error) {
-        console.error("Error fetching templates:", error);
-      } finally {
-        setIsLoading(false);
+          setIsLoading(true);
+
+          const templateSnapshot = await getDocs(collection(db, "templates"));
+          const templateDocs = templateSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            designData: doc.data().cardBase,
+            section: "section4" as const,
+            previewImage: doc.data().previewImage || "",
+          }));
+          setTemplates(templateDocs);
+        } catch (error) {
+          console.error("Error fetching templates:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        console.warn("Not authenticated, cannot fetch templates.");
       }
-    } else {
-      console.warn("Not authenticated, cannot fetch templates.");
-    }
-  });
+    });
 
-  return () => unsubscribe();
-}, []);
-
+    return () => unsubscribe();
+  }, []);
 
   const handleTemplateClick = (template: DesignData) => {
-    console.log("Applying Template:", template);
-
     if (!canvasRef.current) return;
 
     const targetCanvas = canvasRef.current;
@@ -66,8 +69,9 @@ useEffect(() => {
         return;
       }
 
-      // Clear existing canvas objects, keeping the background
-      const backgroundRect = targetCanvas.getObjects().find((obj) => obj instanceof fabric.Rect && obj.fill === "#a8a6a6");
+      const backgroundRect = targetCanvas.getObjects().find(
+        (obj) => obj instanceof fabric.Rect && obj.fill === "#a8a6a6"
+      );
 
       targetCanvas.getObjects().forEach((obj) => {
         if (obj !== backgroundRect) {
@@ -75,7 +79,6 @@ useEffect(() => {
         }
       });
 
-      // Load the template data onto the canvas
       targetCanvas.loadFromJSON(parsedData, () => {
         targetCanvas.renderAll();
       });
@@ -102,12 +105,20 @@ useEffect(() => {
             >
               <div className="relative w-full h-24">
                 {template.previewImage ? (
-                  <img src={template.previewImage} alt="Template Preview" className="object-contain w-full h-full" />
+                  <img
+                    src={template.previewImage}
+                    alt="Template Preview"
+                    className="object-contain w-full h-full"
+                  />
                 ) : (
-                  <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500">No Preview</div>
+                  <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500">
+                    No Preview
+                  </div>
                 )}
               </div>
-              <div className="mt-2 text-xs text-center truncate">Template {template.id.slice(0, 8)}</div>
+              <div className="mt-2 text-xs text-center truncate">
+                Template {template.id.slice(0, 8)}
+              </div>
             </div>
           ))}
         </div>

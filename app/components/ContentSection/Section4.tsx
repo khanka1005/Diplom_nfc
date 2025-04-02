@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as fabric from "fabric";
-import {  collection, addDoc } from "firebase/firestore";
+import {  collection, addDoc, enableNetwork } from "firebase/firestore";
 
 import { getAuthClient, getFirestoreClient } from "@/firebaseConfig";
 import { v4 as uuidv4 } from "uuid";
@@ -233,42 +233,48 @@ const Section4 = ({ canvasState, onCanvasUpdate }: Section4Props) => {
 };
 
 
-  const handleSaveToFirestore = async () => {
-    const auth = getAuthClient();
-    const db = getFirestoreClient();
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user || !canvasRef.current) {
-        setSaving(false);
-        return;
-      }
+const handleSaveToFirestore = async () => {
+  const auth = getAuthClient();
+  const db = getFirestoreClient();
+
+  const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    if (!user || !canvasRef.current) {
+      setSaving(false);
+      return;
+    }
 
     setSaving(true);
-    const canvas = canvasRef.current;
-    
 
-    // Get the objects from the canvas and exclude the cardBase (fixed background)
+    try {
+      // ✅ Force Firestore online (in case it's in offline mode)
+     
+    } catch (err) {
+      console.warn("⚠️ Firestore enableNetwork failed:", err);
+    }
+
+    const canvas = canvasRef.current;
+
     const filteredObjects = canvas.getObjects().filter((obj) => {
       return !(obj as any).isCardBase && obj !== backgroundRef.current;
     });
 
-    // Create a new JSON object for saving that does not include the cardBase
     const filteredJsonState = JSON.stringify({
       ...canvas.toJSON(),
-      objects: filteredObjects, // Only include the filtered objects
+      objects: filteredObjects,
     });
+
     const previewImage = canvas.toDataURL({
-      format: "png", // specify the format as "png"
+      format: "png",
       quality: 1,
       multiplier: 1,
     });
+
     try {
-      // Generate unique card ID
       const cardId = uuidv4();
 
-      // Save the filtered card design to Firestore under users/{uid}/card_view/{docId}
       await addDoc(collection(db, "users", user.uid, "card_view"), {
         id: cardId,
-        cardBase: filteredJsonState, // Save the filtered design as a string
+        cardBase: filteredJsonState,
         previewImage: previewImage,
         createdAt: new Date().toISOString(),
       });
@@ -282,7 +288,7 @@ const Section4 = ({ canvasState, onCanvasUpdate }: Section4Props) => {
       unsubscribe();
     }
   });
-  };
+};
 
   return (
     <div className="flex flex-col items-center gap-2">

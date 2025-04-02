@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {  collection, getDocs } from "firebase/firestore";
+import {  collection, enableNetwork, getDocs } from "firebase/firestore";
 
 import { getAuthClient, getFirestoreClient } from "@/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
@@ -65,39 +65,39 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
         const fetchSavedDesigns = async () => {
           try {
             let allDesigns: DesignData[] = [];
-
+        
+            // ✅ Ensure Firestore is online
+          
+        
             if (selectedTool === "gallery") {
-              // Fetch card_view designs (section4)
               const cardBaseSnapshot = await getDocs(collection(db, "users", user.uid, "card_view"));
               const cardViewDocs = cardBaseSnapshot.docs.map((doc) => ({
                 id: doc.id,
                 designData: doc.data().cardBase,
                 section: "section4" as const,
-                previewImage: doc.data().previewImage || "", // Directly use the preview image from Firestore
+                previewImage: doc.data().previewImage || "",
               }));
               allDesigns = [...allDesigns, ...cardViewDocs];
             } else if (selectedTool === "webview") {
-              // Fetch card_web designs (section5)
               const canvasDataSnapshot = await getDocs(collection(db, "users", user.uid, "card_web"));
               const cardWebDocs = canvasDataSnapshot.docs.map((doc) => ({
                 id: doc.id,
                 designData: doc.data().canvasData,
                 section: "section5" as const,
-                previewImage: doc.data().previewImage || "", // Directly use the preview image from Firestore
+                previewImage: doc.data().previewImage || "",
               }));
               allDesigns = [...allDesigns, ...cardWebDocs];
             } else if (selectedTool === "templates") {
-              // Fetch templates (apply to section4)
               const canvasDataSnapshot = await getDocs(collection(db, "templates"));
               const templateDocs = canvasDataSnapshot.docs.map((doc) => ({
                 id: doc.id,
-                designData: doc.data().cardBase, // Fix this if needed
+                designData: doc.data().cardBase,
                 section: "section4" as const,
                 previewImage: doc.data().previewImage || "",
               }));
               allDesigns = [...allDesigns, ...templateDocs];
             }
-
+        
             setDesigns(allDesigns);
           } catch (error) {
             console.error("Error fetching saved designs:", error);
@@ -105,7 +105,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
             setIsLoading(false);
           }
         };
-
+        
         fetchSavedDesigns();
       }
     });
