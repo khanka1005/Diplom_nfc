@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {  collection, enableNetwork, getDocs } from "firebase/firestore";
+import {  collection, getDocs } from "firebase/firestore";
 
 import { getAuthClient, getFirestoreClient } from "@/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
@@ -67,7 +67,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
             let allDesigns: DesignData[] = [];
         
             // ✅ Ensure Firestore is online
-          
+            
         
             if (selectedTool === "gallery") {
               const cardBaseSnapshot = await getDocs(collection(db, "users", user.uid, "card_view"));
