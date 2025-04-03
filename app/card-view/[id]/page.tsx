@@ -33,18 +33,10 @@ const CardViewPage = () => {
   
   const canvasRef = useRef<fabric.Canvas | null>(null);
   const canvasElRef = useRef<HTMLCanvasElement | null>(null);
-  const profileFrameRef = useRef<fabric.Circle | null>(null);
-  
   const [loading, setLoading] = useState(true);
   const [cardData, setCardData] = useState<CardData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  
   const db = getFirestore();
-
-  // Social media icons mapping
-  
-
-  // Fetch card data from Firestore
   useEffect(() => {
     const fetchCardData = async () => {
       if (!cardId) {
@@ -75,8 +67,6 @@ const CardViewPage = () => {
 
     fetchCardData();
   }, [cardId, db]);
-
-  // Initialize canvas and load data once we have it
   useEffect(() => {
     if (!canvasElRef.current || !cardData) return;
 
@@ -111,10 +101,7 @@ const CardViewPage = () => {
 
 
     canvasRef.current = canvas;
-
-    // After initializing the canvas
     canvasRef.current = canvas;
-
     // Wait for Fabric to finish applying styles
     requestAnimationFrame(() => {
       const upperCanvas = canvas.upperCanvasEl;
@@ -125,9 +112,6 @@ const CardViewPage = () => {
         upperCanvas.style.setProperty("WebkitTouchCallout", "none", "important");
       }
     });
-    
-
-
     const handleTouch = (e: TouchEvent) => {
       if (!canvasRef.current || !canvasElRef.current) return;
 
@@ -149,19 +133,13 @@ const CardViewPage = () => {
     };
     // Attach listener
     canvasElRef.current.addEventListener("touchstart", handleTouch); 
-
     // Load from canvasData
     const loadCanvasState = async () => {
         try {
           const parsedData = JSON.parse(cardData.canvasData);
-          canvas.loadFromJSON(parsedData, () => {
-           
-            
-            
+          canvas.loadFromJSON(parsedData, () => {        
             canvas.renderAll();
-           
             setTimeout(() => {
-             
               canvas.selection = false;
               
             
@@ -169,8 +147,6 @@ const CardViewPage = () => {
               canvas.forEachObject((obj) => {
                 obj.selectable = false;
                 obj.evented = true;
-              
-                // Maintain pointer cursor for interactive elements
                 obj.hoverCursor = obj.evented ? "pointer" : "default";
               
                 const phone = (obj as any).phone;
@@ -219,9 +195,6 @@ const CardViewPage = () => {
                   obj.hoverCursor = "default";
                 }
               });
-              
-              
-              // Final render
               canvas.renderAll();
             }, 200); // Longer timeout to ensure complete loading
           });
