@@ -126,48 +126,47 @@ const CardViewPage = () => {
               
             
               canvas.discardActiveObject();
-              
-              canvas.forEachObject(obj => {
+              canvas.forEachObject((obj) => {
                 obj.selectable = false;
                 obj.evented = true;
-                // Maintain pointer cursor for interactive elements but default for others
-                if (obj.evented === true) {
-                  obj.hoverCursor = 'pointer';
-                } else {
-                  obj.hoverCursor = 'default';
-                }
-                
+              
+                // Maintain pointer cursor for interactive elements
+                obj.hoverCursor = obj.evented ? "pointer" : "default";
+              
                 const phone = (obj as any).phone;
-const email = (obj as any).email;
-const url = (obj as any).url;
-
-if (url) {
-  obj.on("mousedown", () => {
-    const normalized = url.startsWith("http") ? url : `https://${url}`;
-    window.open(normalized, "_blank");
-  });
-  obj.hoverCursor = "pointer";
-}
-
-if (phone) {
-  obj.on("mousedown", () => {
-    window.open(`tel:${phone}`);
-  });
-  obj.hoverCursor = "pointer";
-}
-
-if (email) {
-  obj.on("mousedown", () => {
-    window.open(`mailto:${email}`);
-  });
-  obj.hoverCursor = "pointer";
-}
-
-                // fallback
+                const email = (obj as any).email;
+                const url = (obj as any).url;
+              
+                if (url) {
+                  const openUrl = () => {
+                    const normalized = url.startsWith("http") ? url : `https://${url}`;
+                    window.open(normalized, "_blank");
+                  };
+                  obj.on("mousedown", openUrl);
+                  obj.on("touchstart" as any, openUrl);
+                }
+              
+                if (phone) {
+                  const openPhone = () => {
+                    window.open(`tel:${phone}`);
+                  };
+                  obj.on("mousedown", openPhone);
+                  obj.on("touchstart" as any, openPhone);
+                }
+              
+                if (email) {
+                  const openEmail = () => {
+                    window.open(`mailto:${email}`);
+                  };
+                  obj.on("mousedown", openEmail);
+                  obj.on("touchstart" as any, openEmail);
+                }
+              
                 if (!obj.hoverCursor) {
                   obj.hoverCursor = "default";
                 }
               });
+              
               
               // Final render
               canvas.renderAll();
@@ -311,12 +310,18 @@ if (email) {
     });
 
     // On-click for call & email
-    callButton.on("mousedown", () => {
+    const handleCall = () => {
       if (userInfo.phone) window.open(`tel:${userInfo.phone}`);
-    });
-    emailButton.on("mousedown", () => {
+    };
+    callButton.on("mousedown", handleCall);
+    callButton.on("touchstart" as any, handleCall);
+    
+    const handleEmail = () => {
       if (userInfo.email) window.open(`mailto:${userInfo.email}`);
-    });
+    };
+    emailButton.on("mousedown", handleEmail);
+    emailButton.on("touchstart" as any, handleEmail);
+    
 
     // "Save Contact" button
     const saveContactButton = new fabric.Rect({
