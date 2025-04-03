@@ -119,11 +119,8 @@ const CardViewPage = () => {
     requestAnimationFrame(() => {
       const upperCanvas = canvas.upperCanvasEl;
       if (upperCanvas) {
-        // ✅ Actually removes the existing inline style and sets a new one
         upperCanvas.style.removeProperty("touch-action");
         upperCanvas.style.setProperty("touch-action", "manipulation", "important");
-    
-        // ✅ For extra safety
         upperCanvas.style.setProperty("-ms-touch-action", "manipulation", "important");
         upperCanvas.style.setProperty("WebkitTouchCallout", "none", "important");
       }
@@ -131,28 +128,25 @@ const CardViewPage = () => {
     
 
 
-
     const handleTouch = (e: TouchEvent) => {
       if (!canvasRef.current || !canvasElRef.current) return;
-    
+
       const canvas = canvasRef.current;
       const touch = e.touches[0];
       if (!touch) return;
-    
+
       const simulatedEvent = {
         clientX: touch.clientX,
         clientY: touch.clientY,
       } as MouseEvent;
-    
+
       const pointer = canvas.getPointer(simulatedEvent);
-    
-      // Cast canvas to "any" temporarily to access the private method
       const target = (canvas as any)._searchPossibleTargets(pointer, true);
-    
+
       if (target && typeof target.fire === "function") {
         target.fire("mousedown", { e });
       }
-    };  
+    };
     // Attach listener
     canvasElRef.current.addEventListener("touchstart", handleTouch); 
 
@@ -185,29 +179,42 @@ const CardViewPage = () => {
               
                 if (url) {
                   const openUrl = () => {
-                    const normalized = url.startsWith("http") ? url : `https://${url}`;
-                    window.open(normalized, "_blank");
+                    const a = document.createElement("a");
+                    a.href = url.startsWith("http") ? url : `https://${url}`;
+                    a.target = "_blank";
+                    a.rel = "noopener noreferrer";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                   };
                   obj.on("mousedown", openUrl);
                   obj.on("touchstart" as any, openUrl);
                 }
-              
+  
                 if (phone) {
                   const openPhone = () => {
-                    window.open(`tel:${phone}`);
+                    const a = document.createElement("a");
+                    a.href = `tel:${phone}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                   };
                   obj.on("mousedown", openPhone);
                   obj.on("touchstart" as any, openPhone);
                 }
-              
+  
                 if (email) {
                   const openEmail = () => {
-                    window.open(`mailto:${email}`);
+                    const a = document.createElement("a");
+                    a.href = `mailto:${email}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                   };
                   obj.on("mousedown", openEmail);
                   obj.on("touchstart" as any, openEmail);
                 }
-              
+  
                 if (!obj.hoverCursor) {
                   obj.hoverCursor = "default";
                 }
