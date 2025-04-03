@@ -32,6 +32,7 @@ const CardViewPage = () => {
   const [cardData, setCardData] = useState<CardData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const db = getFirestore();
+  const isProcessingClick = useRef(false);
 
   useEffect(() => {
     const fetchCardData = async () => {
@@ -95,35 +96,9 @@ const CardViewPage = () => {
         upperCanvas.style.removeProperty("touch-action");
         upperCanvas.style.setProperty("touch-action", "manipulation", "important");
         upperCanvas.style.setProperty("-ms-touch-action", "manipulation", "important");
-        (upperCanvas.style as any)["WebkitTouchCallout"] = "none"; // ✅ fixed
+        (upperCanvas.style as any)["WebkitTouchCallout"] = "none";
       }
-      
     });
-
-    // SINGLE event listener for iPhone
-    canvasElRef.current.addEventListener(
-      "touchstart",
-      (e: TouchEvent) => {
-        if (!canvasRef.current) return;
-        const canvas = canvasRef.current;
-        const touch = e.touches[0];
-        if (!touch) return;
-
-        const simulatedEvent = {
-          clientX: touch.clientX,
-          clientY: touch.clientY,
-        } as MouseEvent;
-
-        const pointer = canvas.getPointer(simulatedEvent);
-        const target = (canvas as any)._searchPossibleTargets(pointer, true);
-        if (target && typeof target.fire === "function") {
-          target.fire("mousedown", { e });
-        }
-
-        e.preventDefault(); // block scroll
-      },
-      { passive: false }
-    );
 
     const loadCanvasState = async () => {
       try {
@@ -135,14 +110,12 @@ const CardViewPage = () => {
             canvas.selection = false;
             canvas.discardActiveObject();
 
-            let lastInteraction = 0;
-
             type ActionType = "url" | "phone" | "email";
             const handleAction = (type: ActionType, value: string) => {
-              const now = Date.now();
-              if (now - lastInteraction < 600) return;
-              lastInteraction = now;
-
+              if (isProcessingClick.current) return;
+              
+              isProcessingClick.current = true;
+              
               const a = document.createElement("a");
               if (type === "url") {
                 a.href = value.startsWith("http") ? value : `https://${value}`;
@@ -157,24 +130,38 @@ const CardViewPage = () => {
               document.body.appendChild(a);
               a.click();
               document.body.removeChild(a);
+              
+              // Reset the click processing state after a short delay
+              setTimeout(() => {
+                isProcessingClick.current = false;
+              }, 300);
             };
+
+            // Remove any existing event listeners first
+            canvas.off('mouse:down');
+            
+            // Add a single event listener at the canvas level
+            canvas.on('mouse:down', (options) => {
+              if (!options.target) return;
+              
+              const obj = options.target;
+              const phone = (obj as any).phone;
+              const email = (obj as any).email;
+              const url = (obj as any).url;
+              
+              if (url) {
+                handleAction("url", url);
+              } else if (phone) {
+                handleAction("phone", phone);
+              } else if (email) {
+                handleAction("email", email);
+              }
+            });
 
             canvas.forEachObject((obj) => {
               obj.selectable = false;
               obj.evented = true;
               obj.hoverCursor = "pointer";
-
-              const phone = (obj as any).phone;
-              const email = (obj as any).email;
-              const url = (obj as any).url;
-
-              if (url) {
-                obj.on("mousedown", () => handleAction("url", url));
-              } else if (phone) {
-                obj.on("mousedown", () => handleAction("phone", phone));
-              } else if (email) {
-                obj.on("mousedown", () => handleAction("email", email));
-              }
             });
 
             canvas.renderAll();
