@@ -217,7 +217,6 @@ fabric.Object.prototype.toObject = (function (toObject) {
       const phone = callButton.get("phone");
       if (phone) window.open(`tel:${phone}`);
     });
-    
     emailButton.on("mousedown", () => {
       const email = emailButton.get("email");
       if (email) window.open(`mailto:${email}`);

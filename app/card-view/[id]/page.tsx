@@ -6,10 +6,7 @@ import { getFirestore, doc, getDoc} from "firebase/firestore";
 import * as fabric from "fabric";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-type SocialLink = {
-  platform: string;
-  url: string;
-};
+
 
 type UserInfo = {
   name: string;
@@ -22,7 +19,7 @@ type CardData = {
   userId: string;
   timestamp: any;
   userInfo: UserInfo;
-  socialLinks: SocialLink[];
+  
   canvasData: string;
   previewImage: string;
 };
@@ -89,18 +86,6 @@ const CardViewPage = () => {
         };
       })(fabric.Object.prototype.toObject);
       
-    // Add a background color
-    const bgRect = new fabric.Rect({
-      width: canvas.width!,
-      height: canvas.height!,
-      fill: "#2d1212",
-      selectable: false,
-      evented: false,
-    });
-    canvas.add(bgRect);
-
-
-    canvasRef.current = canvas;
     canvasRef.current = canvas;
     // Wait for Fabric to finish applying styles
     requestAnimationFrame(() => {
@@ -128,8 +113,10 @@ const CardViewPage = () => {
       const target = (canvas as any)._searchPossibleTargets(pointer, true);
 
       if (target && typeof target.fire === "function") {
-        target.fire("mousedown", { e });
+        target.fire("mousedown", { e });       // for desktop compatibility
+        target.fire("touchstart", { e });      // triggers touch-specific listeners
       }
+      
     };
     // Attach listener
     canvasElRef.current.addEventListener("touchstart", handleTouch); 
@@ -163,9 +150,11 @@ const CardViewPage = () => {
                     a.click();
                     document.body.removeChild(a);
                   };
-                  obj.on("mousedown", openUrl);
-                  obj.on("touchstart" as any, openUrl);
+                
+                  obj.on("mousedown", openUrl);              // for mouse
+                  obj.on("touchstart" as any, openUrl);      // for touch (iPhone)
                 }
+                
   
                 if (phone) {
                   const openPhone = () => {
@@ -214,41 +203,7 @@ const CardViewPage = () => {
       }
     };
   }, [cardData]);
-
-  
-  // Ensure the canvas is responsive
-  useEffect(() => {
-    const handleResize = () => {
-      if (!canvasRef.current) return;
-      
-      const canvas = canvasRef.current;
-      canvas.setDimensions({
-        width: window.innerWidth,
-        height: window.innerHeight
-      });
-      
-      
-      // Resize background rectangle
-      const bgRect = canvas.getObjects().find(obj => obj.type === 'rect' && obj.fill === '#2d1212');
-      if (bgRect) {
-        bgRect.set({
-          width: window.innerWidth,
-          height: window.innerHeight
-        });
-      }
-      
-      canvas.renderAll();
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Add interactive elements (call, email, social links)
  
-
-  // Generate and download vCard
-  
 
   if (loading) {
     return (
