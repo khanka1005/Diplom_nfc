@@ -179,34 +179,46 @@ const CardViewPage = () => {
               
                 if (url) {
                   const openUrl = () => {
-                    const normalized = url.startsWith("http") ? url : `https://${url}`;
-                    window.open(normalized, "_blank", "noopener,noreferrer");
+                    const a = document.createElement("a");
+                    a.href = url.startsWith("http") ? url : `https://${url}`;
+                    a.target = "_blank";
+                    a.rel = "noopener noreferrer";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                   };
                   obj.on("mousedown", openUrl);
                   obj.on("touchstart" as any, openUrl);
                 }
-              
+  
                 if (phone) {
                   const openPhone = () => {
-                    window.location.href = `tel:${phone}`;
+                    const a = document.createElement("a");
+                    a.href = `tel:${phone}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                   };
                   obj.on("mousedown", openPhone);
                   obj.on("touchstart" as any, openPhone);
                 }
-              
+  
                 if (email) {
                   const openEmail = () => {
-                    window.location.href = `mailto:${email}`;
+                    const a = document.createElement("a");
+                    a.href = `mailto:${email}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                   };
                   obj.on("mousedown", openEmail);
                   obj.on("touchstart" as any, openEmail);
                 }
-              
+  
                 if (!obj.hoverCursor) {
                   obj.hoverCursor = "default";
                 }
               });
-              
               
               
               // Final render
