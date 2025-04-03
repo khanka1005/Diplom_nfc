@@ -169,7 +169,7 @@ fabric.Object.prototype.toObject = (function (toObject) {
       fill: "#4CAF50",
       rx: 10,
       ry: 10,
-      left: 30,
+      left: 10,
       top: 230,
       selectable: false,
       evented: false,
@@ -177,7 +177,7 @@ fabric.Object.prototype.toObject = (function (toObject) {
     });
     callButton.set({ phone: userInfo.phone });
     const callText = new fabric.Text("Call", {
-      left: 80,
+      left: 60,
       top: 245,
       fontSize: 16,
       fill: "#fff",

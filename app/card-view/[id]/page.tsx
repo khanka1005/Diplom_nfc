@@ -111,8 +111,8 @@ const CardViewPage = () => {
         const originalHeight = 600;
         const screenWidth = window.innerWidth;
         
-        const scale = screenWidth / originalWidth;
-        
+        const scale = (screenWidth / originalWidth) * 0.7;
+    
         // Set dimensions first
         canvas.setWidth(screenWidth);
         canvas.setHeight(originalHeight * scale);
@@ -122,9 +122,11 @@ const CardViewPage = () => {
           // Apply zoom transformation to the entire canvas
           canvas.setZoom(scale);
           
-          // Center all objects
-          canvas.viewportTransform[4] = 0;
-          canvas.viewportTransform[5] = 0;
+          // Center horizontally from the top
+          // This calculates the empty space on each side and divides by 2
+          const horizontalOffset = (screenWidth - (originalWidth * scale)) / 2;
+          canvas.viewportTransform[4] = horizontalOffset;
+          canvas.viewportTransform[5] = 0; // Keep at top (y=0)
           
           canvas.renderAll();
     
@@ -205,11 +207,13 @@ const CardViewPage = () => {
     // Handle resize for mobile responsiveness
     const handleResize = () => {
       if (canvasRef.current) {
-        canvasRef.current.setDimensions({
-          width: window.innerWidth,
-          height: window.innerHeight
-        });
-        canvasRef.current.renderAll();
+        const canvas = canvasRef.current;
+        const scale = window.innerWidth / 250; // Original width
+        
+        canvas.setWidth(window.innerWidth);
+        canvas.setHeight(600 * scale); // Original height * scale
+        canvas.setZoom(scale);
+        canvas.renderAll();
       }
     };
 
