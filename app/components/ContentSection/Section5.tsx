@@ -183,7 +183,7 @@ fabric.Object.prototype.toObject = (function (toObject) {
       fill: "#fff",
       originX: "center",
       selectable: false,
-      evented: false,
+      evented: true,
     });
 
     // Email button
@@ -207,7 +207,7 @@ fabric.Object.prototype.toObject = (function (toObject) {
       fill: "#fff",
       originX: "center",
       selectable: false,
-      evented: false,
+      evented: true,
     });
     // Add delete icon (small red "X" on top right)
     

@@ -156,7 +156,7 @@ const CardViewPage = () => {
           const parsedData = JSON.parse(cardData.canvasData);
           canvas.loadFromJSON(parsedData, () => {
            
-            addInteractiveElements(canvas);
+            
             
             canvas.renderAll();
            
@@ -272,172 +272,10 @@ const CardViewPage = () => {
   }, []);
 
   // Add interactive elements (call, email, social links)
-  const addInteractiveElements = (canvas: fabric.Canvas) => {
-    if (!cardData) return;
-    
-    const { userInfo, socialLinks } = cardData;
-
-    // Position constants
-    const centerX = canvas.width! / 2;
-    const startY = 350;
-
-    // Profile frame circle
-    const profileFrame = new fabric.Circle({
-      radius: 60,
-      fill: "#000000",
-      stroke: "#ffffff",
-      strokeWidth: 4,
-      left: centerX,
-      top: 80,
-      originX: "center",
-      originY: "center",
-      selectable: false,
-      evented: false,
-    });
-    canvas.add(profileFrame);
-    profileFrameRef.current = profileFrame;
-
-    // Name text
-    const nameText = new fabric.Text(userInfo.name, {
-      left: centerX,
-      top: 160,
-      fontSize: 24,
-      fontWeight: "bold",
-      textAlign: "center",
-      originX: "center",
-      fill: "#ffffff",
-      selectable: false,
-    });
-    canvas.add(nameText);
-
-    // Profession text
-    const professionText = new fabric.Text(userInfo.profession, {
-      left: centerX,
-      top: 190,
-      fontSize: 16,
-      textAlign: "center",
-      originX: "center",
-      fill: "#ffffff",
-      selectable: false,
-    });
-    canvas.add(professionText);
-
-    // Call button
-    const callButton = new fabric.Rect({
-      width: 100,
-      height: 40,
-      fill: "#4CAF50",
-      rx: 10,
-      ry: 10,
-      left: centerX - 55,
-      top: 230,
-      selectable: false,
-      evented: true,
-    });
-    const callText = new fabric.Text("Call", {
-      left: centerX - 55 + 50,
-      top: 245,
-      fontSize: 16,
-      fill: "#fff",
-      originX: "center",
-      selectable: false,
-      evented: false,
-    });
-
-    // Email button
-    const emailButton = new fabric.Rect({
-      width: 100,
-      height: 40,
-      fill: "#007bff",
-      rx: 10,
-      ry: 10,
-      left: centerX + 55,
-      top: 230,
-      selectable: false,
-      evented: true,
-    });
-    const emailText = new fabric.Text("Email", {
-      left: centerX + 55 + 50,
-      top: 245,
-      fontSize: 16,
-      fill: "#fff",
-      originX: "center",
-      selectable: false,
-      evented: false,
-    });
-
-    // On-click for call & email
-    const handleCall = () => {
-      if (userInfo.phone) window.open(`tel:${userInfo.phone}`);
-    };
-    callButton.on("mousedown", handleCall);
-    callButton.on("touchstart" as any, handleCall);
-    
-    const handleEmail = () => {
-      if (userInfo.email) window.open(`mailto:${userInfo.email}`);
-    };
-    emailButton.on("mousedown", handleEmail);
-    emailButton.on("touchstart" as any, handleEmail);
-    
-
-    // "Save Contact" button
-    const saveContactButton = new fabric.Rect({
-      width: 160,
-      height: 40,
-      fill: "#6c757d",
-      rx: 10,
-      ry: 10,
-      left: centerX,
-      top: startY + 60,
-      originX: "center",
-      selectable: false,
-      evented: true,
-    });
-    const saveContactText = new fabric.Text("Save Contact", {
-      left: centerX,
-      top: startY + 75,
-      fontSize: 16,
-      fill: "#fff",
-      originX: "center",
-      selectable: false,
-      evented: false,
-    });
-
-    saveContactButton.on("mousedown", () => {
-      generateVCard(userInfo);
-    });
-
-    // Add buttons and text to canvas
-    canvas.add(
-      callButton,
-      callText,
-      emailButton,
-      emailText,
-      saveContactButton,
-      saveContactText
-    );
-    
-    canvas.renderAll();
-  };
+ 
 
   // Generate and download vCard
-  const generateVCard = (userInfo: UserInfo) => {
-    const vcard = `BEGIN:VCARD
-VERSION:3.0
-FN:${userInfo.name}
-TITLE:${userInfo.profession}
-TEL:${userInfo.phone}
-EMAIL:${userInfo.email}
-END:VCARD`;
-
-    const blob = new Blob([vcard], { type: "text/vcard" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${userInfo.name}.vcf`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  
 
   if (loading) {
     return (
