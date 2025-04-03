@@ -113,8 +113,12 @@ const CardViewPage = () => {
       const target = (canvas as any)._searchPossibleTargets(pointer, true);
 
       if (target && typeof target.fire === "function") {
-        target.fire("mousedown", { e });       // for desktop compatibility
-        target.fire("touchstart", { e });      // triggers touch-specific listeners
+        if (e.type === "touchstart") {
+          target.fire("touchstart", { e });
+        } else {
+          target.fire("mousedown", { e });
+        }
+              // triggers touch-specific listeners
       }
       
     };
