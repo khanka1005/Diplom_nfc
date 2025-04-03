@@ -133,17 +133,29 @@ const CardViewPage = () => {
               
             
               canvas.discardActiveObject();
+              const debounceMap = new WeakMap<fabric.Object, number>();
+
+              const shouldSkipEvent = (obj: fabric.Object) => {
+                const now = Date.now();
+                const lastTime = debounceMap.get(obj) || 0;
+                if (now - lastTime < 800) return true;
+                debounceMap.set(obj, now);
+                return false;
+              };
+              
+              
               canvas.forEachObject((obj) => {
                 obj.selectable = false;
                 obj.evented = true;
-                obj.hoverCursor = obj.evented ? "pointer" : "default";
+                obj.hoverCursor = "pointer";
               
                 const phone = (obj as any).phone;
                 const email = (obj as any).email;
                 const url = (obj as any).url;
               
                 if (url) {
-                  const openUrl = () => {
+                  obj.on("mousedown", () => {
+                    if (shouldSkipEvent(obj)) return;
                     const a = document.createElement("a");
                     a.href = url.startsWith("http") ? url : `https://${url}`;
                     a.target = "_blank";
@@ -151,41 +163,36 @@ const CardViewPage = () => {
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
-                  };
-                
-                  obj.on("mousedown", openUrl);              // for mouse
-                  
+                  });
                 }
-                
-  
+              
                 if (phone) {
-                  const openPhone = () => {
+                  obj.on("mousedown", () => {
+                    if (shouldSkipEvent(obj)) return;
                     const a = document.createElement("a");
                     a.href = `tel:${phone}`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
-                  };
-                  obj.on("mousedown", openPhone);
-                  
+                  });
                 }
-  
+              
                 if (email) {
-                  const openEmail = () => {
+                  obj.on("mousedown", () => {
+                    if (shouldSkipEvent(obj)) return;
                     const a = document.createElement("a");
                     a.href = `mailto:${email}`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
-                  };
-                  obj.on("mousedown", openEmail);
-                  
+                  });
                 }
-  
+              
                 if (!obj.hoverCursor) {
                   obj.hoverCursor = "default";
                 }
               });
+              
               canvas.renderAll();
             }, 200); // Longer timeout to ensure complete loading
           });
