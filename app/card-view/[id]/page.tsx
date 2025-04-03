@@ -108,7 +108,37 @@ const CardViewPage = () => {
     });
     canvas.add(bgRect);
 
+
     canvasRef.current = canvas;
+    
+    const handleTouch = (e: TouchEvent) => {
+      if (!canvasRef.current || !canvasElRef.current) return;
+    
+      const canvas = canvasRef.current;
+      const touch = e.touches[0];
+      if (!touch) return;
+    
+      const simulatedEvent = {
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+      } as MouseEvent;
+    
+      const pointer = canvas.getPointer(simulatedEvent);
+    
+      // Cast canvas to "any" temporarily to access the private method
+      const target = (canvas as any)._searchPossibleTargets(pointer, true);
+    
+      if (target && typeof target.fire === "function") {
+        target.fire("mousedown", { e });
+      }
+    };
+    
+    
+
+    
+    
+    // Attach listener
+    canvasElRef.current.addEventListener("touchstart", handleTouch); 
 
     // Load from canvasData
     const loadCanvasState = async () => {
@@ -183,9 +213,13 @@ const CardViewPage = () => {
     // Clean up
     return () => {
       canvas.dispose();
+      if (canvasElRef.current) {
+        canvasElRef.current.removeEventListener("touchstart", handleTouch);
+      }
     };
   }, [cardData]);
 
+  
   // Ensure the canvas is responsive
   useEffect(() => {
     const handleResize = () => {
