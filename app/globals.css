@@ -1,4 +1,10 @@
+/* globals.css */
 
 @tailwind utilities;
 @import "tailwindcss/preflight";
 @import "tailwindcss";
+
+/* ✅ Fix for iPhone touch issue with Fabric.js */
+canvas.upper-canvas {
+  touch-action: manipulation !important;
+}
