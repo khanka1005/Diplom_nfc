@@ -113,29 +113,28 @@ const CardViewPage = () => {
             type ActionType = "url" | "phone" | "email";
             const handleAction = (type: ActionType, value: string) => {
               if (isProcessingClick.current) return;
-              
               isProcessingClick.current = true;
-              
-              const a = document.createElement("a");
+            
               if (type === "url") {
-                a.href = value.startsWith("http") ? value : `https://${value}`;
-                a.target = "_blank";
-                a.rel = "noopener noreferrer";
-              } else if (type === "phone") {
-                a.href = `tel:${value}`;
-              } else if (type === "email") {
-                a.href = `mailto:${value}`;
+                const finalUrl = value.startsWith("http") ? value : `https://${value}`;
+                window.open(finalUrl, "_blank", "noopener,noreferrer"); // ✅ Better for Safari
+              } else {
+                const a = document.createElement("a");
+                if (type === "phone") {
+                  a.href = `tel:${value}`;
+                } else if (type === "email") {
+                  a.href = `mailto:${value}`;
+                }
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
               }
-
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              
-              // Reset the click processing state after a short delay
+            
               setTimeout(() => {
                 isProcessingClick.current = false;
               }, 300);
             };
+            
 
             // Remove any existing event listeners first
             canvas.off('mouse:down');
