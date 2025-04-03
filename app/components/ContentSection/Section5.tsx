@@ -230,7 +230,7 @@ fabric.Object.prototype.toObject = (function (toObject) {
     async function loadFacebookIcon(canvas: fabric.Canvas) {
       try {
         // Pass an options object (even empty), which returns a Promise<FabricImage>
-        const fbImg = await FabricImage.fromURL("/fb.png", {
+        const fbImg = await FabricImage.fromURL("https://diplom-nfc.vercel.app/fb.png", {
           crossOrigin: "anonymous",
         });
         fbImg.scaleToWidth(40);
@@ -269,7 +269,7 @@ fabric.Object.prototype.toObject = (function (toObject) {
      async function loadInstagramIcon(canvas: fabric.Canvas) {
       try {
         // Pass an options object (even empty), which returns a Promise<FabricImage>
-        const igImg = await FabricImage.fromURL("/ig.png", {
+        const igImg = await FabricImage.fromURL("https://diplom-nfc.vercel.app/ig.png", {
           crossOrigin: "anonymous",
         });
         igImg.scaleToWidth(40);
@@ -304,7 +304,7 @@ fabric.Object.prototype.toObject = (function (toObject) {
     async function loadTwitterIcon(canvas: fabric.Canvas) {
       try {
         // Pass an options object (even empty), which returns a Promise<FabricImage>
-        const twitterImg = await FabricImage.fromURL("/twitter.jpg", {
+        const twitterImg = await FabricImage.fromURL("https://diplom-nfc.vercel.app/twitter.jpg", {
           crossOrigin: "anonymous",
         });
         twitterImg.scaleToWidth(40);
