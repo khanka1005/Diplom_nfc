@@ -112,7 +112,14 @@ const CardViewPage = () => {
 
     canvasRef.current = canvas;
 
-    canvasElRef.current!.style.touchAction = "auto"; // or "manipulation"
+    // After initializing the canvas
+canvasRef.current = canvas;
+
+// ✅ Override Fabric's inline style for touch behavior
+if (canvas.upperCanvasEl) {
+  canvas.upperCanvasEl.style.touchAction = "manipulation"; // or "auto"
+}
+
 
 
     const handleTouch = (e: TouchEvent) => {
