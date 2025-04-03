@@ -107,13 +107,34 @@ const CardViewPage = () => {
     const loadCanvasState = async () => {
       try {
         const parsedData = JSON.parse(cardData.canvasData);
+        const originalWidth = 250;
+        const originalHeight = 600;
+        const screenWidth = window.innerWidth;
+    
+        const scale = screenWidth / originalWidth;
+        const scaledHeight = originalHeight * scale;
+    
+        canvas.setWidth(screenWidth);
+        canvas.setHeight(scaledHeight);
+    
         canvas.loadFromJSON(parsedData, () => {
+          // Scale all objects after loading
+          canvas.getObjects().forEach((obj) => {
+            obj.scaleX = (obj.scaleX || 1) * scale;
+            obj.scaleY = (obj.scaleY || 1) * scale;
+            obj.left = (obj.left || 0) * scale;
+            obj.top = (obj.top || 0) * scale;
+            obj.setCoords();
+          });
+    
           canvas.renderAll();
-
-          // Small delay to ensure canvas is fully loaded
+    
           setTimeout(() => {
             canvas.selection = false;
             canvas.discardActiveObject();
+    
+            // ... rest of your interaction logic remains unchanged
+    
 
             type ActionType = "url" | "phone" | "email";
             const handleAction = (type: ActionType, value: string) => {
