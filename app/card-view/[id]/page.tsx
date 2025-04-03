@@ -113,13 +113,9 @@ const CardViewPage = () => {
       const target = (canvas as any)._searchPossibleTargets(pointer, true);
 
       if (target && typeof target.fire === "function") {
-        if (e.type === "touchstart") {
-          target.fire("touchstart", { e });
-        } else {
-          target.fire("mousedown", { e });
-        }
-              // triggers touch-specific listeners
+        target.fire("mousedown", { e }); // ✅ Only fire mousedown
       }
+      
       
     };
     // Attach listener
@@ -156,7 +152,7 @@ const CardViewPage = () => {
                   };
                 
                   obj.on("mousedown", openUrl);              // for mouse
-                  obj.on("touchstart" as any, openUrl);      // for touch (iPhone)
+                 
                 }
                 
   
@@ -169,7 +165,7 @@ const CardViewPage = () => {
                     document.body.removeChild(a);
                   };
                   obj.on("mousedown", openPhone);
-                  obj.on("touchstart" as any, openPhone);
+                 
                 }
   
                 if (email) {
@@ -181,7 +177,7 @@ const CardViewPage = () => {
                     document.body.removeChild(a);
                   };
                   obj.on("mousedown", openEmail);
-                  obj.on("touchstart" as any, openEmail);
+                 
                 }
   
                 if (!obj.hoverCursor) {
