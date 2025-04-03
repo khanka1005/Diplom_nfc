@@ -111,23 +111,29 @@ const CardViewPage = () => {
             canvas.discardActiveObject();
 
             type ActionType = "url" | "phone" | "email";
+            
             const handleAction = (type: ActionType, value: string) => {
               if (isProcessingClick.current) return;
               isProcessingClick.current = true;
-            
+              
               if (type === "url") {
                 const finalUrl = value.startsWith("http") ? value : `https://${value}`;
-                window.open(finalUrl, "_blank", "noopener,noreferrer"); // ✅ Better for Safari
-              } else {
+                // Create and trigger a real anchor element for better compatibility
                 const a = document.createElement("a");
-                if (type === "phone") {
-                  a.href = `tel:${value}`;
-                } else if (type === "email") {
-                  a.href = `mailto:${value}`;
-                }
+                a.href = finalUrl;
+                a.target = "_blank";
+                a.rel = "noopener noreferrer";
+                // For iOS Safari, we need to ensure the element is in the DOM
                 document.body.appendChild(a);
                 a.click();
-                document.body.removeChild(a);
+                // Small delay before removal
+                setTimeout(() => {
+                  document.body.removeChild(a);
+                }, 100);
+              } else if (type === "phone") {
+                window.location.href = `tel:${value}`;
+              } else if (type === "email") {
+                window.location.href = `mailto:${value}`;
               }
             
               setTimeout(() => {

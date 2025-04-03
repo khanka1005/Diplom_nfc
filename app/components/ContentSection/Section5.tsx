@@ -91,7 +91,7 @@ const Section5 = ({ canvasState, onCanvasUpdate }: Section5Props) => {
     // Create the Fabric canvas
     const iphoneCanvas = new fabric.Canvas(iphoneCanvasRef.current, {
       width: 250,
-      height: 800,
+      height: 600,
     });
 // Extend fabric.Object to include custom properties when saving to JSON
 fabric.Object.prototype.toObject = (function (toObject) {
