@@ -110,23 +110,22 @@ const CardViewPage = () => {
         const originalWidth = 250;
         const originalHeight = 600;
         const screenWidth = window.innerWidth;
-    
+        
         const scale = screenWidth / originalWidth;
-        const scaledHeight = originalHeight * scale;
-    
+        
+        // Set dimensions first
         canvas.setWidth(screenWidth);
-        canvas.setHeight(scaledHeight);
-    
+        canvas.setHeight(originalHeight * scale);
+        
+        // Load the JSON without scaling yet
         canvas.loadFromJSON(parsedData, () => {
-          // Scale all objects after loading
-          canvas.getObjects().forEach((obj) => {
-            obj.scaleX = (obj.scaleX || 1) * scale;
-            obj.scaleY = (obj.scaleY || 1) * scale;
-            obj.left = (obj.left || 0) * scale;
-            obj.top = (obj.top || 0) * scale;
-            obj.setCoords();
-          });
-    
+          // Apply zoom transformation to the entire canvas
+          canvas.setZoom(scale);
+          
+          // Center all objects
+          canvas.viewportTransform[4] = 0;
+          canvas.viewportTransform[5] = 0;
+          
           canvas.renderAll();
     
           setTimeout(() => {
