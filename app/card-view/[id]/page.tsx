@@ -98,6 +98,8 @@ const CardViewPage = () => {
       }
     });
     const handleTouch = (e: TouchEvent) => {
+      e.preventDefault(); // ✅ Stops double interaction, zoom, scroll issues
+
       if (!canvasRef.current || !canvasElRef.current) return;
 
       const canvas = canvasRef.current;
@@ -119,7 +121,7 @@ const CardViewPage = () => {
       
     };
     // Attach listener
-    canvasElRef.current.addEventListener("touchstart", handleTouch); 
+    canvasElRef.current.addEventListener("touchstart", handleTouch,{ passive: false }); 
     // Load from canvasData
     const loadCanvasState = async () => {
         try {
@@ -152,7 +154,7 @@ const CardViewPage = () => {
                   };
                 
                   obj.on("mousedown", openUrl);              // for mouse
-                 
+                  
                 }
                 
   
@@ -165,7 +167,7 @@ const CardViewPage = () => {
                     document.body.removeChild(a);
                   };
                   obj.on("mousedown", openPhone);
-                 
+                  
                 }
   
                 if (email) {
@@ -177,7 +179,7 @@ const CardViewPage = () => {
                     document.body.removeChild(a);
                   };
                   obj.on("mousedown", openEmail);
-                 
+                  
                 }
   
                 if (!obj.hoverCursor) {
@@ -199,7 +201,7 @@ const CardViewPage = () => {
     return () => {
       canvas.dispose();
       if (canvasElRef.current) {
-        canvasElRef.current.removeEventListener("touchstart", handleTouch);
+        canvasElRef.current.removeEventListener("touchstart", handleTouch,);
       }
     };
   }, [cardData]);
