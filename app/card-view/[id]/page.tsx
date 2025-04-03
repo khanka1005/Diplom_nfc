@@ -89,7 +89,7 @@ const CardViewPage = () => {
 
     canvasRef.current = canvas;
 
-    // Disable zoom/pinch
+    // Disable zoom/pinch for better mobile handling
     requestAnimationFrame(() => {
       const upperCanvas = canvas.upperCanvasEl;
       if (upperCanvas) {
@@ -97,6 +97,10 @@ const CardViewPage = () => {
         upperCanvas.style.setProperty("touch-action", "manipulation", "important");
         upperCanvas.style.setProperty("-ms-touch-action", "manipulation", "important");
         (upperCanvas.style as any)["WebkitTouchCallout"] = "none";
+        
+        // Add additional styles to improve iOS Safari interaction
+        (upperCanvas.style as any).cursor = "pointer";
+        (upperCanvas.style as any)["-webkit-tap-highlight-color"] = "transparent";
       }
     });
 
@@ -106,47 +110,44 @@ const CardViewPage = () => {
         canvas.loadFromJSON(parsedData, () => {
           canvas.renderAll();
 
+          // Small delay to ensure canvas is fully loaded
           setTimeout(() => {
             canvas.selection = false;
             canvas.discardActiveObject();
 
             type ActionType = "url" | "phone" | "email";
-            
             const handleAction = (type: ActionType, value: string) => {
+              // Prevent multiple rapid clicks
               if (isProcessingClick.current) return;
               isProcessingClick.current = true;
               
-              if (type === "url") {
-                const finalUrl = value.startsWith("http") ? value : `https://${value}`;
-                // Create and trigger a real anchor element for better compatibility
-                const a = document.createElement("a");
-                a.href = finalUrl;
-                a.target = "_blank";
-                a.rel = "noopener noreferrer";
-                // For iOS Safari, we need to ensure the element is in the DOM
-                document.body.appendChild(a);
-                a.click();
-                // Small delay before removal
-                setTimeout(() => {
-                  document.body.removeChild(a);
-                }, 100);
-              } else if (type === "phone") {
-                window.location.href = `tel:${value}`;
-              } else if (type === "email") {
-                window.location.href = `mailto:${value}`;
+              // For iOS Safari compatibility
+              try {
+                if (type === "url") {
+                  const finalUrl = value.startsWith("http") ? value : `https://${value}`;
+                  // Safari-compatible way to open URLs
+                  window.location.href = finalUrl;
+                } else if (type === "phone") {
+                  window.location.href = `tel:${value}`;
+                } else if (type === "email") {
+                  window.location.href = `mailto:${value}`;
+                }
+              } catch (e) {
+                console.error("Navigation error:", e);
+                toast.error("Failed to open link");
               }
-            
+              
+              // Reset click processing state after a delay
               setTimeout(() => {
                 isProcessingClick.current = false;
               }, 300);
             };
             
-
             // Remove any existing event listeners first
             canvas.off('mouse:down');
             
-            // Add a single event listener at the canvas level
-            canvas.on('mouse:down', (options) => {
+            // Add a tap/click event listener
+            canvas.on('mouse:down', function(options) {
               if (!options.target) return;
               
               const obj = options.target;
@@ -163,6 +164,7 @@ const CardViewPage = () => {
               }
             });
 
+            // Make objects interactive but not selectable
             canvas.forEachObject((obj) => {
               obj.selectable = false;
               obj.evented = true;
@@ -180,7 +182,21 @@ const CardViewPage = () => {
 
     loadCanvasState();
 
+    // Handle resize for mobile responsiveness
+    const handleResize = () => {
+      if (canvasRef.current) {
+        canvasRef.current.setDimensions({
+          width: window.innerWidth,
+          height: window.innerHeight
+        });
+        canvasRef.current.renderAll();
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+
     return () => {
+      window.removeEventListener('resize', handleResize);
       canvas.dispose();
     };
   }, [cardData]);
