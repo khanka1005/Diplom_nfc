@@ -2,11 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { getFirestore, doc, getDoc} from "firebase/firestore";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
 import * as fabric from "fabric";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-
 
 type UserInfo = {
   name: string;
@@ -19,7 +18,6 @@ type CardData = {
   userId: string;
   timestamp: any;
   userInfo: UserInfo;
-  
   canvasData: string;
   previewImage: string;
 };
@@ -27,13 +25,14 @@ type CardData = {
 const CardViewPage = () => {
   const params = useParams();
   const cardId = params.id as string;
-  
+
   const canvasRef = useRef<fabric.Canvas | null>(null);
   const canvasElRef = useRef<HTMLCanvasElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [cardData, setCardData] = useState<CardData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const db = getFirestore();
+
   useEffect(() => {
     const fetchCardData = async () => {
       if (!cardId) {
@@ -64,155 +63,135 @@ const CardViewPage = () => {
 
     fetchCardData();
   }, [cardId, db]);
+
   useEffect(() => {
     if (!canvasElRef.current || !cardData) return;
 
-    // Create the Fabric canvas
     const canvas = new fabric.Canvas(canvasElRef.current, {
       width: window.innerWidth,
       height: window.innerHeight,
-    selectable: false ,
-    skipTargetFind:false
+      selectable: false,
+      skipTargetFind: false,
     });
+
     fabric.Object.prototype.toObject = (function (toObject) {
-        return function (this: fabric.Object, ...args: any[]) {
-          const result = toObject.call(this, ...args);
-          return {
-            ...result,
-            url: (this as any).url,
-            phone: (this as any).phone,
-            email: (this as any).email,
-          };
+      return function (this: fabric.Object, ...args: any[]) {
+        const result = toObject.call(this, ...args);
+        return {
+          ...result,
+          url: (this as any).url,
+          phone: (this as any).phone,
+          email: (this as any).email,
         };
-      })(fabric.Object.prototype.toObject);
-      
+      };
+    })(fabric.Object.prototype.toObject);
+
     canvasRef.current = canvas;
-    // Wait for Fabric to finish applying styles
+
+    // Disable zoom/pinch
     requestAnimationFrame(() => {
       const upperCanvas = canvas.upperCanvasEl;
       if (upperCanvas) {
         upperCanvas.style.removeProperty("touch-action");
         upperCanvas.style.setProperty("touch-action", "manipulation", "important");
         upperCanvas.style.setProperty("-ms-touch-action", "manipulation", "important");
-        upperCanvas.style.setProperty("WebkitTouchCallout", "none", "important");
+        (upperCanvas.style as any)["WebkitTouchCallout"] = "none"; // ✅ fixed
       }
+      
     });
-    const handleTouch = (e: TouchEvent) => {
-      e.preventDefault(); // ✅ Stops double interaction, zoom, scroll issues
 
-      if (!canvasRef.current || !canvasElRef.current) return;
+    // SINGLE event listener for iPhone
+    canvasElRef.current.addEventListener(
+      "touchstart",
+      (e: TouchEvent) => {
+        if (!canvasRef.current) return;
+        const canvas = canvasRef.current;
+        const touch = e.touches[0];
+        if (!touch) return;
 
-      const canvas = canvasRef.current;
-      const touch = e.touches[0];
-      if (!touch) return;
+        const simulatedEvent = {
+          clientX: touch.clientX,
+          clientY: touch.clientY,
+        } as MouseEvent;
 
-      const simulatedEvent = {
-        clientX: touch.clientX,
-        clientY: touch.clientY,
-      } as MouseEvent;
-
-      const pointer = canvas.getPointer(simulatedEvent);
-      const target = (canvas as any)._searchPossibleTargets(pointer, true);
-
-      if (target && typeof target.fire === "function") {
-        target.fire("mousedown", { e }); // ✅ Only fire mousedown
-      }
-      
-      
-    };
-    // Attach listener
-    canvasElRef.current.addEventListener("touchstart", handleTouch,{ passive: false }); 
-    // Load from canvasData
-    const loadCanvasState = async () => {
-        try {
-          const parsedData = JSON.parse(cardData.canvasData);
-          canvas.loadFromJSON(parsedData, () => {        
-            canvas.renderAll();
-            setTimeout(() => {
-              canvas.selection = false;
-              
-            
-              canvas.discardActiveObject();
-              const debounceMap = new WeakMap<fabric.Object, number>();
-
-              const shouldSkipEvent = (obj: fabric.Object) => {
-                const now = Date.now();
-                const lastTime = debounceMap.get(obj) || 0;
-                if (now - lastTime < 800) return true;
-                debounceMap.set(obj, now);
-                return false;
-              };
-              
-              
-              canvas.forEachObject((obj) => {
-                obj.selectable = false;
-                obj.evented = true;
-                obj.hoverCursor = "pointer";
-              
-                const phone = (obj as any).phone;
-                const email = (obj as any).email;
-                const url = (obj as any).url;
-              
-                if (url) {
-                  obj.on("mousedown", () => {
-                    if (shouldSkipEvent(obj)) return;
-                    const a = document.createElement("a");
-                    a.href = url.startsWith("http") ? url : `https://${url}`;
-                    a.target = "_blank";
-                    a.rel = "noopener noreferrer";
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                  });
-                }
-              
-                if (phone) {
-                  obj.on("mousedown", () => {
-                    if (shouldSkipEvent(obj)) return;
-                    const a = document.createElement("a");
-                    a.href = `tel:${phone}`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                  });
-                }
-              
-                if (email) {
-                  obj.on("mousedown", () => {
-                    if (shouldSkipEvent(obj)) return;
-                    const a = document.createElement("a");
-                    a.href = `mailto:${email}`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                  });
-                }
-              
-                if (!obj.hoverCursor) {
-                  obj.hoverCursor = "default";
-                }
-              });
-              
-              canvas.renderAll();
-            }, 200); // Longer timeout to ensure complete loading
-          });
-        } catch (error) {
-          console.error("Error parsing canvas JSON:", error);
-          toast.error("Error loading card design");
+        const pointer = canvas.getPointer(simulatedEvent);
+        const target = (canvas as any)._searchPossibleTargets(pointer, true);
+        if (target && typeof target.fire === "function") {
+          target.fire("mousedown", { e });
         }
-      };
-      
-      loadCanvasState();
-  
-    // Clean up
+
+        e.preventDefault(); // block scroll
+      },
+      { passive: false }
+    );
+
+    const loadCanvasState = async () => {
+      try {
+        const parsedData = JSON.parse(cardData.canvasData);
+        canvas.loadFromJSON(parsedData, () => {
+          canvas.renderAll();
+
+          setTimeout(() => {
+            canvas.selection = false;
+            canvas.discardActiveObject();
+
+            let lastInteraction = 0;
+
+            type ActionType = "url" | "phone" | "email";
+            const handleAction = (type: ActionType, value: string) => {
+              const now = Date.now();
+              if (now - lastInteraction < 600) return;
+              lastInteraction = now;
+
+              const a = document.createElement("a");
+              if (type === "url") {
+                a.href = value.startsWith("http") ? value : `https://${value}`;
+                a.target = "_blank";
+                a.rel = "noopener noreferrer";
+              } else if (type === "phone") {
+                a.href = `tel:${value}`;
+              } else if (type === "email") {
+                a.href = `mailto:${value}`;
+              }
+
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+            };
+
+            canvas.forEachObject((obj) => {
+              obj.selectable = false;
+              obj.evented = true;
+              obj.hoverCursor = "pointer";
+
+              const phone = (obj as any).phone;
+              const email = (obj as any).email;
+              const url = (obj as any).url;
+
+              if (url) {
+                obj.on("mousedown", () => handleAction("url", url));
+              } else if (phone) {
+                obj.on("mousedown", () => handleAction("phone", phone));
+              } else if (email) {
+                obj.on("mousedown", () => handleAction("email", email));
+              }
+            });
+
+            canvas.renderAll();
+          }, 300);
+        });
+      } catch (err) {
+        console.error("Error loading canvas JSON:", err);
+        toast.error("Failed to render card design");
+      }
+    };
+
+    loadCanvasState();
+
     return () => {
       canvas.dispose();
-      if (canvasElRef.current) {
-        canvasElRef.current.removeEventListener("touchstart", handleTouch,);
-      }
     };
   }, [cardData]);
- 
 
   if (loading) {
     return (
@@ -232,7 +211,7 @@ const CardViewPage = () => {
 
   return (
     <div className="flex w-full min-h-screen justify-center items-center overflow-hidden">
-      <ToastContainer position="bottom-right" autoClose={3000} hideProgressBar={false} />
+      <ToastContainer position="bottom-right" autoClose={3000} />
       <canvas ref={canvasElRef} className="w-full h-full" />
     </div>
   );
