@@ -113,12 +113,22 @@ const CardViewPage = () => {
     canvasRef.current = canvas;
 
     // After initializing the canvas
-canvasRef.current = canvas;
+    canvasRef.current = canvas;
 
-// ✅ Override Fabric's inline style for touch behavior
-if (canvas.upperCanvasEl) {
-  canvas.upperCanvasEl.style.touchAction = "manipulation"; // or "auto"
-}
+    // Wait for Fabric to finish applying styles
+    requestAnimationFrame(() => {
+      const upperCanvas = canvas.upperCanvasEl;
+      if (upperCanvas) {
+        // ✅ Actually removes the existing inline style and sets a new one
+        upperCanvas.style.removeProperty("touch-action");
+        upperCanvas.style.setProperty("touch-action", "manipulation", "important");
+    
+        // ✅ For extra safety
+        upperCanvas.style.setProperty("-ms-touch-action", "manipulation", "important");
+        upperCanvas.style.setProperty("WebkitTouchCallout", "none", "important");
+      }
+    });
+    
 
 
 
