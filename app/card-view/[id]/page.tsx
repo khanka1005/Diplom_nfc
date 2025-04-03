@@ -84,7 +84,8 @@ const CardViewPage = () => {
     const canvas = new fabric.Canvas(canvasElRef.current, {
       width: window.innerWidth,
       height: window.innerHeight,
-    selectable: false  
+    selectable: false ,
+    skipTargetFind:false
     });
     fabric.Object.prototype.toObject = (function (toObject) {
         return function (this: fabric.Object, ...args: any[]) {
@@ -110,7 +111,10 @@ const CardViewPage = () => {
 
 
     canvasRef.current = canvas;
-    
+
+    canvasElRef.current!.style.touchAction = "auto"; // or "manipulation"
+
+
     const handleTouch = (e: TouchEvent) => {
       if (!canvasRef.current || !canvasElRef.current) return;
     
@@ -131,12 +135,7 @@ const CardViewPage = () => {
       if (target && typeof target.fire === "function") {
         target.fire("mousedown", { e });
       }
-    };
-    
-    
-
-    
-    
+    };  
     // Attach listener
     canvasElRef.current.addEventListener("touchstart", handleTouch); 
 
