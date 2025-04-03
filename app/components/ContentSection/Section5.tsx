@@ -646,7 +646,7 @@ END:VCARD`;
       <div
         className="relative w-[300px] h-[650px] rounded-[40px] overflow-hidden"
         style={{
-          backgroundImage: `url(/iphoneBase.png)`,
+          backgroundImage: `url(https://diplom-nfc.vercel.app/iphoneBase.png)`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
