@@ -43,6 +43,10 @@ const Section5 = ({ canvasState, onCanvasUpdate }: Section5Props) => {
   const profileFrameRef = useRef<fabric.Circle | null>(null);
   const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
 
+  
+
+const [backgroundColor, setBackgroundColor] = useState("#fefdfd");
+
   const [userInfo, setUserInfo] = useState({
     name: "Your Name",
     profession: "Your Profession",
@@ -81,7 +85,17 @@ const Section5 = ({ canvasState, onCanvasUpdate }: Section5Props) => {
   ]);
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
-
+    // Call this from Toolbar when user picks a new background color
+    const updateBackgroundColor = (color: string) => {
+      setBackgroundColor(color);
+      const canvas = canvasRef2.current;
+      if (!canvas) return;
+      const bg = canvas.getObjects().find(obj => (obj as any).isBackground);
+      if (bg) {
+        (bg as fabric.Rect).set("fill", color);
+        canvas.renderAll();
+      }
+    };
  
 
   // Load canvas state if provided
@@ -108,19 +122,26 @@ fabric.Object.prototype.toObject = (function (toObject) {
 
 
     // Background rectangle
-    const bgRect = new fabric.Rect({
-      width: iphoneCanvas.width!,
-      height: iphoneCanvas.height!,
-      fill: "#fefdfd",
-      selectable: false,
-      evented: false, 
-    });
-    (bgRect as any).excludeFromExport = true; // Not saved to JSON
-    iphoneCanvas.add(bgRect);
+   // Add background rectangle with dynamic color
+const bgRect = new fabric.Rect({
+  width: iphoneCanvas.width!,
+  height: iphoneCanvas.height!,
+  fill: backgroundColor,
+  selectable: false,
+  evented: false,
+});
+(bgRect as any).isBackground = true;
+iphoneCanvas.add(bgRect);
+(bgRect as any).excludeFromExport = true; // Not saved to JSON
+iphoneCanvas.sendObjectToBack(bgRect);
+
+    
+    
 
     canvasRef2.current = iphoneCanvas;
     fabricCanvasRef.current = iphoneCanvas;
-    
+
+
     // Profile frame circle
     const profileFrame = new fabric.Circle({
       radius: 60,
@@ -303,7 +324,7 @@ fabric.Object.prototype.toObject = (function (toObject) {
     async function loadTwitterIcon(canvas: fabric.Canvas) {
       try {
         // Pass an options object (even empty), which returns a Promise<FabricImage>
-        const twitterImg = await FabricImage.fromURL("https://diplom-nfc.vercel.app/twitter.jpg", {
+        const twitterImg = await FabricImage.fromURL("https://diplom-nfc.vercel.app/twitter.png", {
           crossOrigin: "anonymous",
         });
         twitterImg.scaleToWidth(40);
@@ -392,6 +413,22 @@ END:VCARD`;
         try {
           const parsedData = JSON.parse(canvasState);
           iphoneCanvas.loadFromJSON(parsedData, () => {
+            console.log("🖼️ Canvas loaded from JSON, rerendering...");
+            iphoneCanvas.renderAll();
+    
+            // ❗ Re-add background after loading
+            const bg = new fabric.Rect({
+              width: iphoneCanvas.width!,
+              height: iphoneCanvas.height!,
+              fill: backgroundColor,
+              selectable: false,
+              evented: false,
+            });
+            (bg as any).isBackground = true;
+            (bg as any).excludeFromExport = true;
+    
+            iphoneCanvas.add(bg);
+            iphoneCanvas.sendObjectToBack(bg);
             iphoneCanvas.renderAll();
           });
         } catch (error) {
@@ -399,6 +436,7 @@ END:VCARD`;
         }
       }
     };
+    
     loadCanvasState();
 
     // When object is modified, update parent
@@ -621,6 +659,7 @@ END:VCARD`;
           socialLinks: socialLinks.map(({ platform, url }) => ({ platform, url })),
           canvasData: JSON.stringify(sanitizedJson),
           previewImage,
+          backgroundColorHex: backgroundColor,
         };
   
         await addDoc(collection(userRef, "card_web"), payload);
@@ -651,7 +690,7 @@ END:VCARD`;
         }}
       >
         <div className="absolute inset-0 flex justify-center items-center p-6">
-          <div className="w-[290px] h-[550px] overflow-y-auto rounded-[30px] shadow-inner bg-white relative z-0">
+          <div className="w-[290px] h-[550px] overflow-y-auto rounded-[30px] shadow-inner relative z-0">
             <canvas ref={iphoneCanvasRef} width={250} height={800} />
           </div>
         </div>
@@ -796,7 +835,34 @@ END:VCARD`;
       </div>
 
       {/* Reuse your existing Toolbar if needed */}
-      <Toolbar canvasRef={canvasRef2} canvasRef2={canvasRef2} currentSection="section5" />
+      <Toolbar canvasRef={canvasRef2} canvasRef2={canvasRef2} currentSection="section5" onBackgroundColorChange={(color) => {
+    updateBackgroundColor(color); // sets state
+    setTimeout(() => {
+      const canvas = canvasRef2.current;
+      if (!canvas) return;
+
+      const bg = canvas.getObjects().find((o) => (o as any).isBackground);
+      if (!bg) {
+        // Re-add background if missing
+        const newBg = new fabric.Rect({
+          width: canvas.width!,
+          height: canvas.height!,
+          fill: color,
+          selectable: false,
+          evented: false,
+        });
+        (newBg as any).isBackground = true;
+        (newBg as any).excludeFromExport = true;
+        canvas.add(newBg);
+        canvas.sendObjectToBack(newBg);
+        canvas.renderAll();
+      } else {
+        (bg as fabric.Rect).set("fill", color);
+        canvas.sendObjectToBack(bg);
+        canvas.renderAll();
+      }
+    }, 200);
+  }} />
     </div>
   );
 };
