@@ -250,7 +250,7 @@ iphoneCanvas.sendObjectToBack(bgRect);
     async function loadFacebookIcon(canvas: fabric.Canvas) {
       try {
         // Pass an options object (even empty), which returns a Promise<FabricImage>
-        const fbImg = await FabricImage.fromURL("https://diplom-nfc.vercel.app/fb.png", {
+        const fbImg = await FabricImage.fromURL("https://diplom-nfc.vercel.app/facebook.png", {
           crossOrigin: "anonymous",
         });
         fbImg.scaleToWidth(40);
@@ -289,7 +289,7 @@ iphoneCanvas.sendObjectToBack(bgRect);
      async function loadInstagramIcon(canvas: fabric.Canvas) {
       try {
         // Pass an options object (even empty), which returns a Promise<FabricImage>
-        const igImg = await FabricImage.fromURL("https://diplom-nfc.vercel.app/ig.png", {
+        const igImg = await FabricImage.fromURL("https://diplom-nfc.vercel.app/instagram.png", {
           crossOrigin: "anonymous",
         });
         igImg.scaleToWidth(40);
