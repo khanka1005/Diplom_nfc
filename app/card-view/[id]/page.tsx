@@ -125,7 +125,7 @@ const CardViewPage = () => {
         canvas.setHeight(originalHeight * scale);
         
         // Create a modified version of the JSON that preserves our background color
-        let modifiedData = parsedData;
+        const modifiedData = parsedData;
         
         // Load the modified JSON
         canvas.loadFromJSON(modifiedData, () => {
