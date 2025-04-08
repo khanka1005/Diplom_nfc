@@ -42,8 +42,10 @@ const Section5 = ({ canvasState, onCanvasUpdate }: Section5Props) => {
   const iphoneCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const profileFrameRef = useRef<fabric.Circle | null>(null);
   const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
+  const [profileImageBase64, setProfileImageBase64] = useState<string | null>(null);
+  const profileImageBase64Ref = useRef<string | null>(null);
+  const profileImageRef = useRef<fabric.Image | null>(null);
 
-  
 
 const [backgroundColor, setBackgroundColor] = useState("#fefdfd");
 
@@ -116,6 +118,7 @@ fabric.Object.prototype.toObject = (function (toObject) {
       url: (this as any).url,
       phone: (this as any).phone,
       email: (this as any).email,
+      vcard: (this as any).vcard, 
     };
   };
 })(fabric.Object.prototype.toObject);
@@ -377,25 +380,41 @@ iphoneCanvas.sendObjectToBack(bgRect);
       selectable: false,
       evented: false,
     });
-
+  
     saveContactButton.on("mousedown", () => {
-      const vcard = `BEGIN:VCARD
-VERSION:3.0
-FN:${userInfo.name}
-TITLE:${userInfo.profession}
-TEL:${userInfo.phone}
-EMAIL:${userInfo.email}
-END:VCARD`;
-
-      const blob = new Blob([vcard], { type: "text/vcard" });
+      const imageMatch = profileImageBase64Ref.current?.match(/^data:(image\/[a-zA-Z]+);base64,(.*)$/);
+      const mimeType = imageMatch?.[1] || "image/jpeg";
+      const imageData = imageMatch?.[2];
+    
+      const wrapVcardBase64 = (str: string) =>
+        str?.match(/.{1,75}/g)?.join("\r\n ") ?? "";
+    
+      const vcardLines = [
+        "BEGIN:VCARD",
+        "VERSION:3.0",
+        `FN:${userInfo.name}`,
+        `TITLE:${userInfo.profession}`,
+        `TEL:${userInfo.phone}`,
+        `EMAIL:${userInfo.email}`,
+      ];
+    
+      if (imageData && imageData.length > 100) {
+        vcardLines.push(`PHOTO;ENCODING=b;TYPE=${mimeType.toUpperCase()}:${wrapVcardBase64(imageData)}`);
+      }
+    
+      vcardLines.push("END:VCARD");
+      const vcard = vcardLines.join("\r\n");
+    
+      const blob = new Blob([vcard], { type: "text/vcard;charset=utf-8" });
       const url = URL.createObjectURL(blob);
+    
       const a = document.createElement("a");
       a.href = url;
       a.download = `${userInfo.name}.vcf`;
       a.click();
       URL.revokeObjectURL(url);
     });
-
+    
     // Add call/email/save objects to canvas
     iphoneCanvas.add(
       callButton,
@@ -437,6 +456,8 @@ END:VCARD`;
       }
     };
     
+
+    
     loadCanvasState();
 
     // When object is modified, update parent
@@ -460,6 +481,8 @@ END:VCARD`;
       iphoneCanvas.dispose();
     };
   }, [canvasState, socialLinks, userInfo, onCanvasUpdate]);
+  
+  
 
   // Handle user info changes & update canvas text
   const handleUserInfoChange = (field: string, value: string) => {
@@ -546,8 +569,14 @@ END:VCARD`;
     const reader = new FileReader();
     reader.onload = (e) => {
       if (!e.target?.result) return;
-  
-      fabric.Image.fromURL(e.target.result as string, { crossOrigin: "anonymous" }).then((img) => {
+      
+      const base64 = e.target.result as string;
+      profileImageBase64Ref.current = base64;
+setProfileImageBase64(base64); // ✅ update state (for Firestore later)
+if (profileImageRef.current) {
+  canvas.remove(profileImageRef.current); // Remove old image
+}
+      fabric.Image.fromURL(base64, { crossOrigin: "anonymous" }).then((img) => {
         img.scaleToWidth(120);
         img.scaleToHeight(120);
         img.set({
@@ -568,7 +597,7 @@ END:VCARD`;
           selectable: true,
         });
   
-        // Add a custom delete control to the image
+        // 🧠 Custom delete control (unchanged)
         img.controls.deleteControl = new fabric.Control({
           x: 0.5,
           y: -0.5,
@@ -580,7 +609,7 @@ END:VCARD`;
             canvas.requestRenderAll();
             return true;
           },
-          render: (ctx, left, top,) => {
+          render: (ctx, left, top) => {
             const size = 16;
             ctx.save();
             ctx.translate(left, top);
@@ -595,9 +624,8 @@ END:VCARD`;
             ctx.fillText('✕', 0, 1);
             ctx.restore();
           },
-          
         });
-  
+        profileImageRef.current = img;
         canvas.add(img);
         canvas.setActiveObject(img);
         canvas.renderAll();
@@ -605,8 +633,10 @@ END:VCARD`;
         toast.success("Profile image uploaded successfully!");
       });
     };
+  
     reader.readAsDataURL(file);
   };
+  
   
   
 
@@ -617,7 +647,43 @@ END:VCARD`;
   
     if (!canvasRef2.current) return;
     const canvas = canvasRef2.current;
+    const saveContactObj = canvas.getObjects().find(
+      (obj) => obj instanceof fabric.Rect && obj.width === 160 && obj.height === 40 && obj.fill === "#6c757d"
+    );
+    
+    if (saveContactObj) {
+      const imageMatch = profileImageBase64Ref.current?.match(/^data:(image\/[a-zA-Z]+);base64,(.*)$/);
+      const mimeType = imageMatch?.[1] || "image/jpeg";
+      const imageData = imageMatch?.[2];
+    
+      const wrapVcardBase64 = (str: string) =>
+        str?.match(/.{1,75}/g)?.join("\r\n ") ?? "";
+    
+      const vcardLines = [
+        "BEGIN:VCARD",
+        "VERSION:3.0",
+        `FN:${userInfo.name}`,
+        `TITLE:${userInfo.profession}`,
+        `TEL:${userInfo.phone}`,
+        `EMAIL:${userInfo.email}`,
+      ];
+    
+      if (imageData && imageData.length > 100) {
+        vcardLines.push(
+          `PHOTO;ENCODING=b;TYPE=${mimeType.toUpperCase()}:${wrapVcardBase64(imageData)}`
+        );
+      }
+    
+      vcardLines.push("END:VCARD");
+      const vcard = vcardLines.join("\r\n");
+    
+      (saveContactObj as any).vcard = vcard; // ✅ embed into canvas object
+    }
+    
     const json = canvas.toJSON();
+    const hasVcard = json.objects.some((obj: any) => obj.vcard);
+console.log("✅ vCard present in canvas JSON:", hasVcard);
+
   
     if (!json) {
       toast.error("Failed to generate canvas JSON");
@@ -628,7 +694,8 @@ END:VCARD`;
       version: json.version,
       objects: json.objects.filter((obj: any) => !obj.excludeFromExport),
     };
-  
+    console.log("🧾 Final JSON before Firestore:", sanitizedJson);
+
     const previewImage = canvas.toDataURL({
       format: "png",
       quality: 1,
@@ -660,6 +727,8 @@ END:VCARD`;
           canvasData: JSON.stringify(sanitizedJson),
           previewImage,
           backgroundColorHex: backgroundColor,
+          profileImage: profileImageBase64,
+          
         };
   
         await addDoc(collection(userRef, "card_web"), payload);

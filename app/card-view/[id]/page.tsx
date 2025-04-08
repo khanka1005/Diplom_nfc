@@ -20,6 +20,7 @@ type CardData = {
   userInfo: UserInfo;
   canvasData: string;
   previewImage: string;
+  backgroundColorHex?: string;
 };
 
 const CardViewPage = () => {
@@ -83,6 +84,7 @@ const CardViewPage = () => {
           url: (this as any).url,
           phone: (this as any).phone,
           email: (this as any).email,
+          vcard: (this as any).vcard,
         };
       };
     })(fabric.Object.prototype.toObject);
@@ -106,6 +108,11 @@ const CardViewPage = () => {
 
     const loadCanvasState = async () => {
       try {
+        // Set parent div background color first (this will show even if canvas is loading)
+        if (cardData.backgroundColorHex && canvasElRef.current && canvasElRef.current.parentElement) {
+          canvasElRef.current.parentElement.style.backgroundColor = cardData.backgroundColorHex;
+        }
+        
         const parsedData = JSON.parse(cardData.canvasData);
         const originalWidth = 250;
         const originalHeight = 600;
@@ -117,19 +124,69 @@ const CardViewPage = () => {
         canvas.setWidth(screenWidth);
         canvas.setHeight(originalHeight * scale);
         
-        // Load the JSON without scaling yet
-        canvas.loadFromJSON(parsedData, () => {
+        // Create a modified version of the JSON that preserves our background color
+        let modifiedData = parsedData;
+        
+        // Load the modified JSON
+        canvas.loadFromJSON(modifiedData, () => {
           // Apply zoom transformation to the entire canvas
           canvas.setZoom(scale);
           
           // Center horizontally from the top
-          // This calculates the empty space on each side and divides by 2
           const horizontalOffset = (screenWidth - (originalWidth * scale)) / 2;
           canvas.viewportTransform[4] = horizontalOffset;
           canvas.viewportTransform[5] = 0; // Keep at top (y=0)
           
+          // Force background color as an overlay background rectangle
+          if (cardData.backgroundColorHex) {
+            // First apply to canvas background
+            canvas.backgroundColor = cardData.backgroundColorHex;
+            
+            // Then create a full-canvas background rectangle that's always behind everything
+            const bgRect = new fabric.Rect({
+              left: -horizontalOffset / scale,
+              top: 0,
+              width: screenWidth / scale,
+              height: canvas.getHeight() / scale,
+              fill: cardData.backgroundColorHex,
+              selectable: false,
+              evented: false,
+              excludeFromExport: true,
+            });
+            
+            // Add a special property to identify this as our background
+            (bgRect as any).isBackground = true;
+            
+            // Add and send to back
+            canvas.add(bgRect);
+            canvas.sendObjectToBack(bgRect);
+            
+            // Also set canvas CSS background as fallback
+            const canvasContainer = canvas.wrapperEl;
+            if (canvasContainer) {
+              canvasContainer.style.backgroundColor = cardData.backgroundColorHex;
+            }
+          }
+          
           canvas.renderAll();
-    
+          const objectsWithVcard = canvas.getObjects().filter((obj) => (obj as any).vcard);
+          if (objectsWithVcard.length > 0) {
+            console.log("🧾 Found vCard object(s):", objectsWithVcard);
+          } else {
+            console.warn("❌ No vCard field found in any object.");
+          }
+          const parsed = JSON.parse(cardData.canvasData);
+
+          // Check if any object contains the vcard field
+          const hasVcard = parsed.objects.some((obj: any) => obj.vcard);
+          
+          console.log("vCard exists in canvasData:", hasVcard); // true or false
+          
+          if (hasVcard) {
+            const vcardObject = parsed.objects.find((obj: any) => obj.vcard);
+            console.log("📇 vCard content:", vcardObject.vcard);
+          }
+
           setTimeout(() => {
             canvas.selection = false;
             canvas.discardActiveObject();
@@ -176,6 +233,18 @@ const CardViewPage = () => {
               const phone = (obj as any).phone;
               const email = (obj as any).email;
               const url = (obj as any).url;
+              const vcard = (obj as any).vcard;
+              if (vcard) {
+                // ✅ Download vCard (.vcf)
+                const blob = new Blob([vcard], { type: "text/vcard;charset=utf-8" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "contact.vcf";
+                a.click();
+                URL.revokeObjectURL(url);
+                return;
+              }
               
               if (url) {
                 handleAction("url", url);
@@ -213,6 +282,21 @@ const CardViewPage = () => {
         canvas.setWidth(window.innerWidth);
         canvas.setHeight(600 * scale); // Original height * scale
         canvas.setZoom(scale);
+        
+        // Re-apply background color on resize
+        if (cardData && cardData.backgroundColorHex) {
+          canvas.backgroundColor = cardData.backgroundColorHex;
+          
+          // Find and update the background rectangle if it exists
+          const bgRect = canvas.getObjects().find(obj => (obj as any).isBackground);
+          if (bgRect) {
+            bgRect.set({
+              width: canvas.getWidth() / scale,
+              height: canvas.getHeight() / scale
+            });
+          }
+        }
+        
         canvas.renderAll();
       }
     };
@@ -245,6 +329,7 @@ const CardViewPage = () => {
     <div className="flex w-full min-h-screen justify-center items-center overflow-hidden">
       <ToastContainer position="bottom-right" autoClose={3000} />
       <canvas ref={canvasElRef} className="w-full h-full" />
+      
     </div>
   );
 };
