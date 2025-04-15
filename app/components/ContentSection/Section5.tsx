@@ -47,7 +47,7 @@ const Section5 = ({ canvasState, onCanvasUpdate }: Section5Props) => {
   const profileImageRef = useRef<fabric.Image | null>(null);
 
 
-const [backgroundColor, setBackgroundColor] = useState("#fefdfd");
+const [backgroundColor, setBackgroundColor] = useState("#424ddf");
 
   const [userInfo, setUserInfo] = useState({
     name: "Your Name",
@@ -190,7 +190,7 @@ iphoneCanvas.sendObjectToBack(bgRect);
     const callButton = new fabric.Rect({
       width: 100,
       height: 40,
-      fill: "#4CAF50",
+      fill: "#ffffff",
       rx: 10,
       ry: 10,
       left: 10,
@@ -200,12 +200,17 @@ iphoneCanvas.sendObjectToBack(bgRect);
       phone: userInfo.phone,
     });
     callButton.set({ phone: userInfo.phone });
-    const callText = new fabric.Text("Call", {
+    const callText = new fabric.Text("📞 Call", {
       left: 60,
-      top: 245,
+      top: 242,
       fontSize: 16,
-      fill: "#fff",
+      fill: "#000000",
       originX: "center",
+      styles: {
+        0: {
+          0: { fontSize: 16 }  // First character only
+        }
+      },
       selectable: false,
       evented: true,
     });
@@ -214,7 +219,7 @@ iphoneCanvas.sendObjectToBack(bgRect);
     const emailButton = new fabric.Rect({
       width: 100,
       height: 40,
-      fill: "#007bff",
+      fill: "#ffffff",
       rx: 10,
       ry: 10,
       left: 140,
@@ -224,16 +229,21 @@ iphoneCanvas.sendObjectToBack(bgRect);
       email: userInfo.email, 
     });
     emailButton.set({ email: userInfo.email });
-    const emailText = new fabric.Text("Email", {
+    const emailText = new fabric.Text("✉ Email", {
       left: 190,
-      top: 245,
+      top: 232,
       fontSize: 16,
-      fill: "#fff",
+      fill: "#000000",
       originX: "center",
+      styles: {
+        0: {
+          0: { fontSize: 27 }  // First character only
+        }
+      },
       selectable: false,
       evented: true,
     });
-    // Add delete icon (small red "X" on top right)
+    
     
 
     // On-click for call & email
@@ -245,8 +255,14 @@ iphoneCanvas.sendObjectToBack(bgRect);
       const email = emailButton.get("email");
       if (email) window.open(`mailto:${email}`);
     });
-    
-    ;
+    callText.on("mousedown", () => {
+      const phone = callButton.get("phone"); // still use callButton to get phone
+      if (phone) window.open(`tel:${phone}`);
+    });
+    emailText.on("mousedown", () => {
+      const email = emailButton.get("email"); // use emailButton to get email
+      if (email) window.open(`mailto:${email}`);
+    });
 
 
     // Load PNG for Facebook

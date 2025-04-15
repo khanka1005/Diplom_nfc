@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {  collection, getDocs } from "firebase/firestore";
 
 import { getAuthClient, getFirestoreClient } from "@/firebaseConfig";
@@ -36,25 +36,34 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
   const [isLoading, setIsLoading] = useState(false);
 
   const [, setIsTextSelected] = useState(false);
-
+  const [activeObject, setActiveObject] = useState<fabric.Object | null>(null);
+  
   useEffect(() => {
     if (!canvasRef || !canvasRef.current) return; // Check for undefined or null
   
     const canvas = canvasRef.current;
-  
+    
     const handleSelection = () => {
+      const active = canvas.getActiveObject();
       const activeObject = canvas.getActiveObject();
       setIsTextSelected(activeObject?.type === "text");
+      setActiveObject(active || null); 
     };
-  
+    
     canvas.on("selection:created", handleSelection);
     canvas.on("selection:updated", handleSelection);
-    canvas.on("selection:cleared", () => setIsTextSelected(false));
+    canvas.on("selection:cleared", () => 
+    {setIsTextSelected(false);
+      setActiveObject(null);
+    });
   
     return () => {
       canvas.off("selection:created", handleSelection);
       canvas.off("selection:updated", handleSelection);
-      canvas.off("selection:cleared", () => setIsTextSelected(false));
+      canvas.off("selection:cleared", () => {
+        setIsTextSelected(false);
+        setActiveObject(null);
+      });
     };
   }, [canvasRef]);
   
@@ -319,14 +328,44 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
             />
             <span className="text-xs text-center">Background</span>
           </div>
+
+          <div
+  className={`flex flex-col items-center justify-center p-3 cursor-pointer mb-4 ${
+    selectedTool === "object" ? "text-orange-500" : "text-gray-700 hover:text-gray-900"
+  }`}
+  onClick={() => setSelectedTool("object")}
+>
+  <div className="w-6 h-6 rounded-full bg-red-400 text-white flex items-center justify-center mb-1">
+    ✕
+  </div>
+  <span className="text-xs text-center">Object</span>
+</div>
         </div>
   
         {/* Expanded Panel */}
         {isExpanded && (
           <div className="flex-1 p-4 overflow-y-auto relative z-20">
-            {selectedTool === "text" ? (
-              <TextToolbar canvasRef={canvasRef} />
-            ) : selectedTool === "background" && currentSection === "section5" ? (
+         {selectedTool === "object" ? (
+  <div className="flex flex-col gap-2 mt-2">
+    <p className="text-sm font-medium">Manage Object</p>
+    <button
+      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+      onClick={() => {
+        const canvas = canvasRef.current;
+        const active = canvas?.getActiveObject();
+        if (canvas && active) {
+          canvas.remove(active);
+          canvas.discardActiveObject();
+          canvas.requestRenderAll();
+        }
+      }}
+    >
+      Delete Selected
+    </button>
+  </div>
+) : selectedTool === "text" ? (
+  <TextToolbar canvasRef={canvasRef} />
+): selectedTool === "background" && currentSection === "section5" ? (
               <div className="mt-4">
                 <label className="block text-sm font-medium mb-2">Pick Background Color</label>
                 <IphoneBackground onColorChange={(color) => onBackgroundColorChange?.(color)} />

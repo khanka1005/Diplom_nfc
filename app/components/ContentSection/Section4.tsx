@@ -27,11 +27,6 @@ import { onAuthStateChanged } from "firebase/auth";
   };
 })((fabric.Object.prototype as any).initialize);
 
-
-
-
-
-
 type Section4Props = {
   canvasState?: string; // Base64 image or JSON string of canvas state
   onCanvasUpdate?: (state: string) => void; // Callback to send updates to parent
@@ -40,7 +35,7 @@ type Section4Props = {
 const Section4 = ({ canvasState, onCanvasUpdate }: Section4Props) => {
   const canvasRef = useRef<fabric.Canvas | null>(null);
   const canvasElementRef = useRef<HTMLCanvasElement | null>(null);
-  const brandTextRef = useRef<fabric.Text | null>(null);
+  const brandTextRef = useRef<fabric.Textbox | null>(null);
   const cardBaseRef = useRef<fabric.Rect | null>(null);
   const backgroundRef = useRef<fabric.Rect | null>(null);
 
@@ -49,189 +44,323 @@ const Section4 = ({ canvasState, onCanvasUpdate }: Section4Props) => {
  
 
   
-  useEffect(() => {
-    if (!canvasElementRef.current) return;
+  // First useEffect: Initialize canvas
+useEffect(() => {
+  if (!canvasElementRef.current) return;
 
-    const canvas = new fabric.Canvas(canvasElementRef.current, {
-      backgroundColor: "transparent",
-      selection: true, // Enable selection
-    });
+  const canvas = new fabric.Canvas(canvasElementRef.current, {
+    backgroundColor: "transparent",
+    selection: true,
+  });
 
-    canvasRef.current = canvas;
+  canvasRef.current = canvas;
 
-    // Create the gray background (slightly larger than card base)
   const backgroundRect = new fabric.Rect({
-    width: 700, // Slightly larger than the card base
-    height: 500, // Slightly larger than the card base
+    width: 700,
+    height: 500,
     fill: "#a8a6a6",
-   
     selectable: false,
     evented: false,
   });
 
-    // Create the rounded card base
-    const cardBase = new fabric.Rect({
-      width: 500,
-      height: 300,
-      fill: "white",
-      rx: 20,
-      ry: 20,
-      shadow: new fabric.Shadow({
-        color: "#000000",
-        blur: 1,
-        offsetX: 0,
-        offsetY: 0,
-      }),
-      selectable: false,
-      evented: false,
-      isCardBase: true, 
-    });
-    const centerX = (canvas.width || 0) / 2;
+  const cardBase = new fabric.Rect({
+    width: 500,
+    height: 300,
+    fill: "white",
+    rx: 20,
+    ry: 20,
+    shadow: new fabric.Shadow({ color: "#000", blur: 1, offsetX: 0, offsetY: 0 }),
+    selectable: false,
+    evented: false,
+    isCardBase: true,
+  });
+
+  const centerX = (canvas.width || 0) / 2;
   const centerY = (canvas.height || 0) / 2;
 
-  backgroundRect.set({
-    left: centerX - backgroundRect.width! / 2,
-    top: centerY - backgroundRect.height! / 2,
+  backgroundRect.set({ left: centerX - 350, top: centerY - 250 });
+  cardBase.set({ left: centerX - 250, top: centerY - 150 });
+
+  canvas.add(backgroundRect, cardBase);
+  canvas.sendObjectToBack(backgroundRect);
+  backgroundRef.current = backgroundRect;
+  cardBaseRef.current = cardBase;
+
+  const brandText = new fabric.Textbox("My Brand", {
+    left: 130,
+    top: 120,
+    fontSize: 26,
+    fontWeight: "bold",
+    fill: "black",
+    editable: true,
+  });
+  canvas.add(brandText);
+  brandTextRef.current = brandText;
+
+  canvas.on("object:modified", () => {
+    if (onCanvasUpdate) onCanvasUpdate(JSON.stringify(canvas.toJSON()));
   });
 
-  cardBase.set({
-    left: centerX - cardBase.width! / 2,
-    top: centerY - cardBase.height! / 2,
+  // Add event listeners for selection to ensure controls are displayed
+  canvas.on("selection:created", () => {
+    console.log("Selection created");
+    canvas.requestRenderAll();
   });
-    canvas.add(backgroundRect);
-    canvas.add(cardBase);
-    cardBaseRef.current = cardBase;
-    backgroundRef.current = backgroundRect;
-    canvas.sendObjectToBack(backgroundRect);
+  
+  canvas.on("selection:updated", () => {
+    console.log("Selection updated");
+    canvas.requestRenderAll();
+  });
 
-    // Brand text always visible
-    const brandText = new fabric.Text("My Brand", {
-      left: 130,
-      top: 120,
-      fontSize: 26,
-      fontWeight: "bold",
-      fill: "black",
-      selectable: true,
+  return () => {
+    canvas.dispose();
+  };
+}, []); // ✅ Runs once to initialize canvas
+
+// Second useEffect: Handle loading canvas state
+useEffect(() => {
+  const canvas = canvasRef.current;
+  
+  if (!canvas || !canvasState) {
+    console.log("Waiting for canvas and canvas state to be ready...");
+    return;
+  }
+  
+  console.log("🔄 Loading canvas state...");
+  
+  const loadCanvasState = async () => {
+    try {
+      const json = JSON.parse(canvasState);
+      console.log("🧠 Parsed canvas JSON state");
       
-    });
-
-    const loadCanvasState = async () => {
-      if (canvasState) {
-        try {
-          const jsonState = JSON.parse(canvasState); // Try to parse as JSON
-          canvas.loadFromJSON(jsonState, () => {
-            canvas.renderAll();
-          });
-        } catch (error) {
-          console.warn("Canvas state is not JSON, treating as Base64 image.");
-
-          // Clear existing canvas
-          canvas.clear();
-
-          try {
-            const img = await fabric.Image.fromURL(canvasState);
-            img.scaleToWidth(canvas.width || 300);
-            img.scaleToHeight(canvas.height || 300);
-            canvas.add(img);
-            canvas.renderAll();
-          } catch (error) {
-            console.error("Failed to load image:", error);
+      // Clear any existing content first
+      canvas.clear();
+      
+      // Restore background and card base first
+      if (backgroundRef.current) canvas.add(backgroundRef.current);
+      if (cardBaseRef.current) canvas.add(cardBaseRef.current);
+      
+      // Load JSON state
+      canvas.loadFromJSON(json, () => {
+        console.log("✅ Canvas loaded from JSON");
+        
+        // Ensure background is at the back
+        if (backgroundRef.current) canvas.sendObjectToBack(backgroundRef.current);
+        
+        // Process all objects, focusing on images
+        canvas.getObjects().forEach(obj => {
+          if (obj.type === "image") {
+            const img = obj as fabric.Image;
+            
+            console.log("🖼️ Processing image object");
+            
+            // Configure image properties
+            img.set({
+              hasControls: true,
+              hasBorders: false,
+              selectable: true,
+            });
+            
+            // Create or update delete control
+            if (!img.controls) img.controls = {};
+            
+            img.controls.deleteControl = new fabric.Control({
+              x: 0.5,
+              y: -0.5,
+              offsetY: -10,
+              offsetX: 10,
+              cursorStyle: 'pointer',
+              mouseUpHandler: (_, transform) => {
+                console.log("🗑️ Delete clicked on image");
+                canvas.remove(transform.target);
+                canvas.requestRenderAll();
+                return true;
+              },
+              render: (ctx, left, top) => {
+                ctx.save();
+                ctx.translate(left, top);
+                ctx.fillStyle = "#ff4d4d";
+                ctx.beginPath();
+                ctx.arc(0, 0, 8, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.fillStyle = "white";
+                ctx.font = "12px sans-serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("✕", 0, 1);
+                ctx.restore();
+              },
+            });
+            
+            // Update coordinates
+            img.setCoords();
           }
-        }
-      }
-    };
-
-    loadCanvasState(); // Call async function inside useEffect
-
-    canvas.on("object:modified", () => {
-      if (onCanvasUpdate) {
-        onCanvasUpdate(JSON.stringify(canvas.toJSON()));
-      }
-    });
-
-    canvas.add(brandText);
-    brandTextRef.current = brandText;
-
-    // Attach global event listener for clicks outside the canvas
-   
-
-    return () => {
-      // Clean up event listener and canvas
-     canvas.discardActiveObject();
-      canvas.dispose();
-    };
-  }, [canvasState]);
-
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const canvas = canvasRef.current;
-    const cardBase = cardBaseRef.current;
-    
-    const backgroundRect = canvas?.getObjects().find(obj => obj instanceof fabric.Rect && obj.fill === "gray");
-
-    if (!canvas || !cardBase) return;
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      if (!e.target?.result || !canvasRef.current) return;
-
-      try {
-        const img = await fabric.Image.fromURL(e.target.result as string, { crossOrigin: "anonymous" });
-
-        const centerX = (canvas.width || 0) / 2;
-        const centerY = (canvas.height || 0) / 2;
-
-        img.scaleToWidth(cardBase.width! * 0.8);
-        img.scaleToHeight(cardBase.height! * 0.8);
-        img.set({
-          left: cardBase.left,
-          top: cardBase.top,
-          selectable: true,
-          clipPath: new fabric.Rect({
-            width: cardBase.width!,
-            height: cardBase.height!,
-            left: centerX - cardBase.width! / 2,
-            top: centerY - cardBase.height! / 2,
-            rx: 20,
-            ry: 20,
-            absolutePositioned: true,
-          }),
         });
-
-        // Ensure correct layering order
-        canvas.add(img);
-        canvas.setActiveObject(img);
-
-        // Send background to back
-        if (backgroundRect) {
-          canvas.sendObjectToBack(backgroundRect);
-        }
-
-        // Keep card base above background
-        if (cardBaseRef.current) {
-          canvas.bringObjectToFront(cardBaseRef.current);
-        }
-
-        // Keep image above the card base
-        canvas.bringObjectToFront(img);
-
-        // Keep brand text at the very front
-        if (brandTextRef.current) {
+        
+        // Bring brand text to front if it exists
+        if (brandTextRef.current && canvas.contains(brandTextRef.current)) {
           canvas.bringObjectToFront(brandTextRef.current);
         }
-
-        // Force full re-render
-        canvas.renderAll();
+        
+        // Select first image to show controls
+        const firstImage = canvas.getObjects().find(o => o.type === "image");
+        if (firstImage) {
+          console.log("🎯 Selecting first image to show controls");
+          canvas.setActiveObject(firstImage);
+        } else {
+          console.log("⚠️ No images found to select");
+        }
+        
+        // Force render
+        canvas.requestRenderAll();
+      });
+    } catch (err) {
+      console.warn("⚠️ canvasState is not JSON, trying as base64", err);
+      try {
+        canvas.clear();
+        
+        // Restore background and card base
+        if (backgroundRef.current) canvas.add(backgroundRef.current);
+        if (cardBaseRef.current) canvas.add(cardBaseRef.current);
+        
+        // Load the base64 image
+        const img = await fabric.Image.fromURL(canvasState);
+        img.scaleToWidth(canvas.width || 300);
+        img.scaleToHeight(canvas.height || 300);
+        
+        // Set up delete control for this image
+        img.controls = {
+          ...fabric.Object.prototype.controls,
+          deleteControl: new fabric.Control({
+            x: 0.5,
+            y: -0.5,
+            offsetY: -10,
+            offsetX: 10,
+            cursorStyle: 'pointer',
+            mouseUpHandler: (_, transform) => {
+              canvas.remove(transform.target);
+              canvas.requestRenderAll();
+              return true;
+            },
+            render: (ctx, left, top) => {
+              ctx.save();
+              ctx.translate(left, top);
+              ctx.fillStyle = "#ff4d4d";
+              ctx.beginPath();
+              ctx.arc(0, 0, 8, 0, 2 * Math.PI);
+              ctx.fill();
+              ctx.fillStyle = "white";
+              ctx.font = "12px sans-serif";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText("✕", 0, 1);
+              ctx.restore();
+            },
+          }),
+        };
+        
+        canvas.add(img);
+        
+        // Send image to back if it's a background
+        if (backgroundRef.current) canvas.sendObjectToBack(backgroundRef.current);
+        
+        // Bring brand text to front if it exists
+        if (brandTextRef.current) canvas.bringObjectToFront(brandTextRef.current);
+        
+        canvas.requestRenderAll();
       } catch (error) {
-        console.error("Failed to load image:", error);
+        console.error("❌ Failed to load image:", error);
       }
-    };
+    }
+  };
+  
+  loadCanvasState();
+}, [canvasState]); // Only run when canvasState changes
 
-    reader.readAsDataURL(file);
-};
 
+
+
+
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+  
+    const canvas = canvasRef.current;
+    const cardBase = cardBaseRef.current;
+    if (!canvas || !cardBase) return;
+  
+    const centerX = (canvas.width || 0) / 2;
+    const centerY = (canvas.height || 0) / 2;
+  
+    for (const file of files) {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (e.target?.result) resolve(e.target.result as string);
+          else reject("Failed to read image");
+        };
+        reader.readAsDataURL(file);
+      });
+  
+      const img = await fabric.Image.fromURL(base64, { crossOrigin: "anonymous" });
+  
+      img.scaleToWidth(cardBase.width! * 0.8);
+      img.scaleToHeight(cardBase.height! * 0.8);
+      img.set({
+        left: cardBase.left,
+        top: cardBase.top,
+        hasControls: true,
+          hasBorders: false,
+          selectable: true,
+        clipPath: new fabric.Rect({
+          width: cardBase.width!,
+          height: cardBase.height!,
+          left: centerX - cardBase.width! / 2,
+          top: centerY - cardBase.height! / 2,
+          rx: 20,
+          ry: 20,
+          absolutePositioned: true,
+        }),
+      });
+      img.controls.deleteControl = new fabric.Control({
+        x: 0.5,
+        y: -0.5,
+        offsetY: -10,
+        offsetX: 10,
+        cursorStyle: 'pointer',
+        mouseUpHandler: (eventData, transform) => {
+          canvas.remove(transform.target);
+          canvas.requestRenderAll();
+          return true;
+        },
+        render: (ctx, left, top) => {
+          const size = 16;
+          ctx.save();
+          ctx.translate(left, top);
+          ctx.fillStyle = '#ff4d4d';
+          ctx.beginPath();
+          ctx.arc(0, 0, size / 2, 0, 2 * Math.PI);
+          ctx.fill();
+          ctx.fillStyle = 'white';
+          ctx.font = '12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('✕', 0, 1);
+          ctx.restore();
+        },
+      });
+  
+      canvas.add(img);           // Add to canvas
+      canvas.bringObjectToFront(img);  // Put on top of previous image
+  
+      if (brandTextRef.current) {
+        canvas.bringObjectToFront(brandTextRef.current); // Keep brand always on top
+      }
+    }
+  
+    canvas.renderAll();
+  };
 
 const handleSaveToFirestore = async () => {
   const auth = getAuthClient();
@@ -327,6 +456,7 @@ const handleSaveToFirestore = async () => {
             type="file"
             className="hidden"
             accept="image/*"
+            multiple
             onChange={handleImageUpload}
           />
         </label>
