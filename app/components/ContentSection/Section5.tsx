@@ -202,12 +202,13 @@ iphoneCanvas.sendObjectToBack(bgRect);
       phone: userInfo.phone,
     });
     callButton.set({ phone: userInfo.phone });
-    const callText = new fabric.Text("📞 Залгах", {
+    const callText = new fabric.Text("Залгах", {
       left: 60,
-      top: 242,
+      top: 252,
       fontSize: 16,
       fill: "#000000",
       originX: "center",
+      originY: "center",
       styles: {
         0: {
           0: { fontSize: 16 }  
@@ -216,6 +217,7 @@ iphoneCanvas.sendObjectToBack(bgRect);
       selectable: false,
       evented: true,
     });
+    callText.set({ phone: userInfo.phone });
 
     // Email button
     const emailButton = new fabric.Rect({
@@ -231,20 +233,22 @@ iphoneCanvas.sendObjectToBack(bgRect);
       email: userInfo.email, 
     });
     emailButton.set({ email: userInfo.email });
-    const emailText = new fabric.Text("✉ Емайл хаяг", {
+    const emailText = new fabric.Text("Емайл хаяг", {
       left: 190,
-      top: 232,
+      top: 252,
       fontSize: 16,
       fill: "#000000",
       originX: "center",
+      originY: "center",
       styles: {
         0: {
-          0: { fontSize: 28 }  // First character only
+          0: { fontSize: 20 }  // First character only
         }
       },
       selectable: false,
       evented: true,
     });
+    emailText.set({ email: userInfo.email });
     
     
 
@@ -666,7 +670,7 @@ if (profileImageRef.current) {
     if (!canvasRef2.current) return;
     const canvas = canvasRef2.current;
     const saveContactObj = canvas.getObjects().find(
-      (obj) => obj instanceof fabric.Rect && obj.width === 160 && obj.height === 40 && obj.fill === "#6c757d"
+      (obj) => obj instanceof fabric.Rect && obj.width === 160 && obj.height === 40 && obj.fill === "#2c33e9"
     );
     
     if (saveContactObj) {

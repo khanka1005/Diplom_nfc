@@ -6,7 +6,6 @@ import { getFirestore, doc, getDoc } from "firebase/firestore";
 import * as fabric from "fabric";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import Head from "next/head";
 
 type UserInfo = {
   name: string;
@@ -30,7 +29,6 @@ const CardViewPage = () => {
 
   const canvasRef = useRef<fabric.Canvas | null>(null);
   const canvasElRef = useRef<HTMLCanvasElement | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [cardData, setCardData] = useState<CardData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -69,40 +67,15 @@ const CardViewPage = () => {
   }, [cardId, db]);
 
   useEffect(() => {
-    // Set full viewport background color as soon as data is available
-    if (cardData?.backgroundColorHex && containerRef.current) {
-      document.body.style.backgroundColor = cardData.backgroundColorHex;
-      document.body.style.margin = "0";
-      document.body.style.padding = "0";
-      document.body.style.overflow = "hidden";
-      document.documentElement.style.backgroundColor = cardData.backgroundColorHex;
-      
-      containerRef.current.style.backgroundColor = cardData.backgroundColorHex;
-    }
-  }, [cardData]);
+    if (!canvasElRef.current || !cardData) return;
 
-  useEffect(() => {
-    if (!canvasElRef.current || !cardData || !containerRef.current) return;
-
-    // Ensure full viewport coverage with no gaps
-    const fullWidth = window.innerWidth;
-    const fullHeight = window.innerHeight;
-    
-    // Detect iOS device
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    
-    // Setup canvas with proper dimensions
     const canvas = new fabric.Canvas(canvasElRef.current, {
-      width: fullWidth,
-      height: fullHeight,
+      width: window.innerWidth,
+      height: window.innerHeight,
       selectable: false,
       skipTargetFind: false,
     });
 
-    canvasRef.current = canvas;
-
-    // Extend fabric objects to include our custom properties
     fabric.Object.prototype.toObject = (function (toObject) {
       return function (this: fabric.Object, ...args: any[]) {
         const result = toObject.call(this, ...args);
@@ -116,7 +89,9 @@ const CardViewPage = () => {
       };
     })(fabric.Object.prototype.toObject);
 
-    // Improve touch handling on mobile
+    canvasRef.current = canvas;
+
+    // Disable zoom/pinch for better mobile handling
     requestAnimationFrame(() => {
       const upperCanvas = canvas.upperCanvasEl;
       if (upperCanvas) {
@@ -124,104 +99,88 @@ const CardViewPage = () => {
         upperCanvas.style.setProperty("touch-action", "manipulation", "important");
         upperCanvas.style.setProperty("-ms-touch-action", "manipulation", "important");
         (upperCanvas.style as any)["WebkitTouchCallout"] = "none";
+        
+        // Add additional styles to improve iOS Safari interaction
         (upperCanvas.style as any).cursor = "pointer";
         (upperCanvas.style as any)["-webkit-tap-highlight-color"] = "transparent";
-        
-        // Apply iOS-specific fixes
-        if (isIOS) {
-          upperCanvas.style.position = "fixed";
-          upperCanvas.style.top = "0";
-          upperCanvas.style.left = "0";
-        }
-      }
-      
-      // Also style the canvas wrappers for iOS
-      if (canvas.wrapperEl) {
-        canvas.wrapperEl.style.position = "fixed";
-        canvas.wrapperEl.style.top = "0";
-        canvas.wrapperEl.style.left = "0";
-        canvas.wrapperEl.style.width = "100%";
-        canvas.wrapperEl.style.height = "100%";
-        canvas.wrapperEl.style.margin = "0";
-        canvas.wrapperEl.style.padding = "0";
       }
     });
 
     const loadCanvasState = async () => {
       try {
-        // Apply background color to the entire viewport
-       // Apply background color to the entire viewport
-if (cardData.backgroundColorHex) {
-  canvas.backgroundColor = cardData.backgroundColorHex;
-  if (containerRef.current) {
-    containerRef.current.style.backgroundColor = cardData.backgroundColorHex;
-  }
-  document.body.style.backgroundColor = cardData.backgroundColorHex;
-}
+        // Set parent div background color first (this will show even if canvas is loading)
+        if (cardData.backgroundColorHex && canvasElRef.current && canvasElRef.current.parentElement) {
+          canvasElRef.current.parentElement.style.backgroundColor = cardData.backgroundColorHex;
+        }
         
         const parsedData = JSON.parse(cardData.canvasData);
         const originalWidth = 250;
         const originalHeight = 600;
+        const screenWidth = window.innerWidth;
         
-        // Calculate scale to fit the entire device viewport
-        const scaleWidth = fullWidth / originalWidth;
-        const scaleHeight = fullHeight / originalHeight;
-        const scale = Math.max(scaleWidth, scaleHeight) * 0.7; // Use the larger scale to ensure full coverage
+        const scale = (screenWidth / originalWidth) * 0.7;
+    
+        // Set dimensions first
+        canvas.setWidth(screenWidth);
+        canvas.setHeight(originalHeight * scale);
         
-        // Set dimensions to cover the entire viewport
-        canvas.setWidth(fullWidth);
-        canvas.setHeight(fullHeight);
+        // Create a modified version of the JSON that preserves our background color
+        const modifiedData = parsedData;
         
-        // Load the JSON data
-        canvas.loadFromJSON(parsedData, () => {
-          // Apply zoom transformation
+        // Load the modified JSON
+        canvas.loadFromJSON(modifiedData, () => {
+          // Apply zoom transformation to the entire canvas
           canvas.setZoom(scale);
           
-          // Center horizontally
-          const horizontalOffset = (fullWidth - (originalWidth * scale)) / 2;
+          // Center horizontally from the top
+          const horizontalOffset = (screenWidth - (originalWidth * scale)) / 2;
+          canvas.viewportTransform[4] = horizontalOffset;
+          canvas.viewportTransform[5] = 0; // Keep at top (y=0)
           
-          // For iOS: apply extra vertical offset to account for status bar and safe areas
-          let verticalOffset = 0;
-          if (isIOS) {
-            verticalOffset = -25; // This negative value pushes content up to eliminate the gap
+          // Force background color as an overlay background rectangle
+          if (cardData.backgroundColorHex) {
+            // First apply to canvas background
+            canvas.backgroundColor = cardData.backgroundColorHex;
+            
+            // Then create a full-canvas background rectangle that's always behind everything
+            const bgRect = new fabric.Rect({
+              left: -horizontalOffset / scale,
+              top: 0,
+              width: screenWidth / scale,
+              height: canvas.getHeight() / scale,
+              fill: cardData.backgroundColorHex,
+              selectable: false,
+              evented: false,
+              excludeFromExport: true,
+            });
+            
+            // Add a special property to identify this as our background
+            (bgRect as any).isBackground = true;
+            
+            // Add and send to back
+            canvas.add(bgRect);
+            canvas.sendObjectToBack(bgRect);
+            
+            // Also set canvas CSS background as fallback
+            const canvasContainer = canvas.wrapperEl;
+            if (canvasContainer) {
+              canvasContainer.style.backgroundColor = cardData.backgroundColorHex;
+            }
           }
           
-          canvas.viewportTransform[4] = horizontalOffset;
-          canvas.viewportTransform[5] = verticalOffset;
-          
-          // Create a full-viewport background rectangle
-          const bgRect = new fabric.Rect({
-            left: -horizontalOffset / scale,
-            top: -verticalOffset / scale, // Compensate for the vertical offset
-            width: fullWidth / scale + 100, // Add extra width for safe measure
-            height: fullHeight / scale + 100, // Add extra height for safe measure
-            fill: cardData.backgroundColorHex || "#ffffff",
-            selectable: false,
-            evented: false,
-            excludeFromExport: true,
-          });
-          
-          // Add a special property to identify this as our background
-          (bgRect as any).isBackground = true;
-          
-          // Add and send to back
-          canvas.add(bgRect);
-          canvas.sendObjectToBack(bgRect);
-          
           canvas.renderAll();
-          
-          // Check for vCard objects
           const objectsWithVcard = canvas.getObjects().filter((obj) => (obj as any).vcard);
           if (objectsWithVcard.length > 0) {
             console.log("🧾 Found vCard object(s):", objectsWithVcard);
           } else {
             console.warn("❌ No vCard field found in any object.");
           }
-          
           const parsed = JSON.parse(cardData.canvasData);
+
+          // Check if any object contains the vcard field
           const hasVcard = parsed.objects.some((obj: any) => obj.vcard);
           
-          console.log("vCard exists in canvasData:", hasVcard);
+          console.log("vCard exists in canvasData:", hasVcard); // true or false
           
           if (hasVcard) {
             const vcardObject = parsed.objects.find((obj: any) => obj.vcard);
@@ -232,15 +191,20 @@ if (cardData.backgroundColorHex) {
             canvas.selection = false;
             canvas.discardActiveObject();
     
+            // ... rest of your interaction logic remains unchanged
+    
+
             type ActionType = "url" | "phone" | "email";
             const handleAction = (type: ActionType, value: string) => {
               // Prevent multiple rapid clicks
               if (isProcessingClick.current) return;
               isProcessingClick.current = true;
               
+              // For iOS Safari compatibility
               try {
                 if (type === "url") {
-                  const finalUrl = value.startsWith("http") ? value : `https://${value}`;
+                  const finalUrl = value.startsWith("http") ? value:`https://${value}`;
+                  // Safari-compatible way to open URLs
                   window.location.href = finalUrl;
                 } else if (type === "phone") {
                   window.location.href = `tel:${value}`;
@@ -252,12 +216,13 @@ if (cardData.backgroundColorHex) {
                 toast.error("Failed to open link");
               }
               
+              // Reset click processing state after a delay
               setTimeout(() => {
                 isProcessingClick.current = false;
               }, 300);
             };
             
-            // Remove any existing event listeners
+            // Remove any existing event listeners first
             canvas.off('mouse:down');
             
             // Add a tap/click event listener
@@ -269,9 +234,8 @@ if (cardData.backgroundColorHex) {
               const email = (obj as any).email;
               const url = (obj as any).url;
               const vcard = (obj as any).vcard;
-              
               if (vcard) {
-                // Download vCard (.vcf)
+                // ✅ Download vCard (.vcf)
                 const blob = new Blob([vcard], { type: "text/vcard;charset=utf-8" });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
@@ -311,52 +275,30 @@ if (cardData.backgroundColorHex) {
 
     // Handle resize for mobile responsiveness
     const handleResize = () => {
-      if (!canvasRef.current) return;
-      
-      const canvas = canvasRef.current;
-      const newWidth = window.innerWidth;
-      const newHeight = window.innerHeight;
-      
-      // Original dimensions
-      const originalWidth = 250;
-      const originalHeight = 600;
-      
-      // Calculate new scale to fill the screen
-      const scaleWidth = newWidth / originalWidth;
-      const scaleHeight = newHeight / originalHeight;
-      const scale = Math.max(scaleWidth, scaleHeight) * 0.7;
-      
-      // Update canvas dimensions
-      canvas.setWidth(newWidth);
-      canvas.setHeight(newHeight);
-      canvas.setZoom(scale);
-      
-      // Recenter horizontally
-      const horizontalOffset = (newWidth - (originalWidth * scale)) / 2;
-      
-      // Determine if iOS and apply vertical offset
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      let verticalOffset = 0;
-      if (isIOS) {
-        verticalOffset = -25; // Negative value to push up (eliminate gap)
+      if (canvasRef.current) {
+        const canvas = canvasRef.current;
+        const scale = window.innerWidth / 250; // Original width
+        
+        canvas.setWidth(window.innerWidth);
+        canvas.setHeight(600 * scale); // Original height * scale
+        canvas.setZoom(scale);
+        
+        // Re-apply background color on resize
+        if (cardData && cardData.backgroundColorHex) {
+          canvas.backgroundColor = cardData.backgroundColorHex;
+          
+          // Find and update the background rectangle if it exists
+          const bgRect = canvas.getObjects().find(obj => (obj as any).isBackground);
+          if (bgRect) {
+            bgRect.set({
+              width: canvas.getWidth() / scale,
+              height: canvas.getHeight() / scale
+            });
+          }
+        }
+        
+        canvas.renderAll();
       }
-      
-      canvas.viewportTransform[4] = horizontalOffset;
-      canvas.viewportTransform[5] = verticalOffset;
-      
-      // Update background rectangle if it exists
-      const bgRect = canvas.getObjects().find(obj => (obj as any).isBackground);
-      if (bgRect) {
-        bgRect.set({
-          left: -horizontalOffset / scale,
-          top: -verticalOffset / scale,
-          width: newWidth / scale + 100,
-          height: newHeight / scale + 100
-        });
-      }
-      
-      canvas.renderAll();
     };
 
     window.addEventListener('resize', handleResize);
@@ -384,22 +326,11 @@ if (cardData.backgroundColorHex) {
   }
 
   return (
-    <>
-      <Head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-      </Head>
-      <div 
-        ref={containerRef}
-        className="fixed inset-0 w-screen h-screen overflow-hidden"
-        style={{ backgroundColor: cardData?.backgroundColorHex || '#ffffff' }}
-      >
-        <ToastContainer position="bottom-right" autoClose={3000} />
-        <canvas 
-          ref={canvasElRef} 
-          className="w-full h-full touch-manipulation" 
-        />
-      </div>
-    </>
+    <div className="flex w-full min-h-screen justify-center items-center overflow-hidden">
+      <ToastContainer position="bottom-right" autoClose={3000} />
+      <canvas ref={canvasElRef} className="w-full h-full" />
+      
+    </div>
   );
 };
 
