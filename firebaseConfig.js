@@ -1,4 +1,4 @@
-// firebaseConfig.js
+
 import { initializeApp, getApps, getApp } from "firebase/app";
 import {
   initializeFirestore,
@@ -9,7 +9,7 @@ import {
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getAnalytics } from "firebase/analytics";
 
-// Your Firebase config
+
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -20,12 +20,9 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase app only once
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-// Safe Firestore init with persistence
 let firestoreInstance = null;
-
 export const getFirestoreClient = () => {
   if (typeof window === "undefined") {
     console.warn("⚠️ Firestore called on server — returning null");
@@ -44,7 +41,6 @@ export const getFirestoreClient = () => {
         err instanceof Error &&
         err.message.includes("initializeFirestore() has already been called")
       ) {
-        // Fall back to the existing one
         firestoreInstance = getFirestore(app);
       } else {
         throw err;
@@ -55,13 +51,11 @@ export const getFirestoreClient = () => {
   return firestoreInstance;
 };
 
-// Get Auth (only on client)
 export const getAuthClient = () => {
   if (typeof window === "undefined") throw new Error("Must be used in the browser");
   return getAuth(app);
 };
 
-// Analytics (optional)
 export const getAnalyticsClient = () => {
   if (typeof window === "undefined") return null;
   return getAnalytics(app);

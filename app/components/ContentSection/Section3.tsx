@@ -7,6 +7,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { getFirestoreClient, getAuthClient } from "@/firebaseConfig";
 import { collection, doc, getDocs, getDoc, addDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
+import PaymentModal from "../utility/PaymentModal";
 
 interface DesignItem {
   docId: string;
@@ -25,6 +26,7 @@ const Section3 = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const [userData, setUserData] = useState({
     fullName: "",
@@ -108,7 +110,7 @@ const Section3 = () => {
     const auth = getAuthClient();
     const user = auth.currentUser;
     const db = getFirestoreClient();
-  
+    setShowPaymentModal(true);
     if (!user) {
       toast.error("You must be logged in to place an order.");
       return;
@@ -162,13 +164,62 @@ const Section3 = () => {
   const closePreview = () => {
     setPreviewImage(null);
   };
+  const handleConfirmPayment = async ({ method, quantity, total }: { method: string; quantity: number; total: number }) => {
+    setShowPaymentModal(false); // Close modal
   
+    const auth = getAuthClient();
+    const db = getFirestoreClient();
+    const user = auth.currentUser;
+    if (!user) return;
+  
+    try {
+      setIsSubmitting(true);
+      const cardViewDoc = await getDoc(doc(db, "users", user.uid, "card_view", selectedCardView));
+      const cardWebDoc = await getDoc(doc(db, "users", user.uid, "card_web", selectedCardWeb));
+  
+      const publicRef = await addDoc(collection(db, "card_public"), cardWebDoc.data());
+      const iphoneUrl = `${window.location.origin}/card-view/${publicRef.id}`;
+  
+      const orderRef = await addDoc(collection(db, "order"), {
+        userId: user.uid,
+        ...userData,
+        cardViewData: cardViewDoc.data()?.cardBase,
+        cardViewPreview: cardViewDoc.data()?.previewImage || "",
+        cardWebData: cardWebDoc.data()?.canvasData,
+        cardWebPreview: cardWebDoc.data()?.previewImage || "",
+        iphone_url: iphoneUrl,
+        order_status: false,
+        createdAt: new Date().toISOString(),
+      });
+      console.log("Order ID:", orderRef.id);
+      // Save payment info
+      const paymentRef = collection(db, "order", orderRef.id, "payment");
+      await addDoc(paymentRef, {
+        method,
+        quantity,
+        total,
+        status: "pending",
+        userId: user.uid,
+        createdAt: new Date().toISOString(),
+      });
+  
+      toast.success("Захиалга амжилттай илгээгдлээ!");
+      setShowDesignModal(false);
+      setSelectedCardView("");
+      setSelectedCardWeb("");
+    } catch (err) {
+      toast.error("Алдаа гарлаа.");
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   return (
     <div className="flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-indigo-100 py-5 w-300 min-h-screen">
       <div className="w-full max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-1">
-          <h1 className="text-4xl font-bold text-indigo-800 mb-3">Complete Your Order</h1>
+          <h1 className="text-4xl font-bold text-indigo-800 mb-3">Захиалгын хэсэг</h1>
         </div>
 
         {/* Step Indicator */}
@@ -183,30 +234,30 @@ const Section3 = () => {
         {/* Order Form */}
         {!showDesignModal && (
           <div className="bg-white p-8 rounded-xl shadow-lg border border-indigo-100 transition-all duration-300 hover:shadow-xl">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-6">Contact Information</h2>
+            <h2 className="text-2xl font-semibold text-gray-800 mb-6">Мэдээллээ оруулна уу!</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="relative">
-                <label className="text-sm font-medium text-gray-700 mb-1 block">Full Name <span className="text-red-500">*</span></label>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Овог нэр <span className="text-red-500">*</span></label>
                 <input
                   type="text"
-                  placeholder="John Doe"
+                  placeholder="Хан-Эрдэнэ"
                   className="border border-gray-300 p-3 rounded-lg w-full focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                   value={userData.fullName}
                   onChange={(e) => handleInputChange("fullName", e.target.value)}
                 />
               </div>
               <div className="relative">
-                <label className="text-sm font-medium text-gray-700 mb-1 block">Phone Number <span className="text-red-500">*</span></label>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Утасны дугаар <span className="text-red-500">*</span></label>
                 <input
                   type="text"
-                  placeholder="+1 123 456 7890"
+                  placeholder="+976 99 999 999"
                   className="border border-gray-300 p-3 rounded-lg w-full focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                   value={userData.phone}
                   onChange={(e) => handleInputChange("phone", e.target.value)}
                 />
               </div>
               <div className="relative">
-                <label className="text-sm font-medium text-gray-700 mb-1 block">Email Address <span className="text-red-500">*</span></label>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Емайл хаяг <span className="text-red-500">*</span></label>
                 <input
                   type="email"
                   placeholder="youremail@example.com"
@@ -216,19 +267,19 @@ const Section3 = () => {
                 />
               </div>
               <div className="relative">
-                <label className="text-sm font-medium text-gray-700 mb-1 block">Shipping Address <span className="text-red-500">*</span></label>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Хүргээлэх хаяг <span className="text-red-500">*</span></label>
                 <input
                   type="text"
-                  placeholder="123 Main St, City, State, Zip"
+                  placeholder="БЗД, 13-р хороолол"
                   className="border border-gray-300 p-3 rounded-lg w-full focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                   value={userData.address}
                   onChange={(e) => handleInputChange("address", e.target.value)}
                 />
               </div>
               <div className="col-span-1 md:col-span-2">
-                <label className="text-sm font-medium text-gray-700 mb-1 block">Additional Notes</label>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Нэмэлт тэмдэглэл</label>
                 <textarea
-                  placeholder="Special instructions or requirements..."
+                  placeholder="Орцны дугаар"
                   className="border border-gray-300 p-3 rounded-lg w-full h-24 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all resize-none"
                   value={userData.notes}
                   onChange={(e) => handleInputChange("notes", e.target.value)}
@@ -240,7 +291,7 @@ const Section3 = () => {
                 onClick={handleContinue}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center"
               >
-                Continue to Designs
+                Үргэлжлүүлэх
                 <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
@@ -253,7 +304,7 @@ const Section3 = () => {
         {showDesignModal && (
           <div className="bg-white p-8 rounded-xl shadow-lg border border-indigo-100 transition-all duration-300 hover:shadow-xl">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-semibold text-gray-800">Select Your Designs</h2>
+              <h2 className="text-2xl font-semibold text-gray-800">Загвараа сонгоно уу!</h2>
               <button
                 onClick={handleBack}
                 className="text-indigo-600 hover:text-indigo-800 flex items-center text-sm font-medium"
@@ -284,7 +335,7 @@ const Section3 = () => {
             </div>
 
             <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-700 mb-3">Card Base Design</h3>
+              <h3 className="text-lg font-semibold text-gray-700 mb-3">Картны загвар</h3>
               {filteredCardViewList.length === 0 ? (
                 <p className="text-gray-500 text-center py-6">No card base designs found.</p>
               ) : (
@@ -341,7 +392,7 @@ const Section3 = () => {
             </div>
 
             <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-700 mb-3">Web Layout Design</h3>
+              <h3 className="text-lg font-semibold text-gray-700 mb-3">Утасны загвар</h3>
               {filteredCardWebList.length === 0 ? (
                 <p className="text-gray-500 text-center py-6">No web layout designs found.</p>
               ) : (
@@ -399,14 +450,14 @@ const Section3 = () => {
 
             {/* Selection Summary */}
             <div className="bg-gray-50 p-4 rounded-lg mb-6">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Your Selection</h3>
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Таны сонголт</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-gray-500">Card Base:</p>
+                  <p className="text-xs text-gray-500">Карт:</p>
                   <p className="font-medium text-gray-800">{selectedCardView ? selectedCardView : "Not selected"}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Web Layout:</p>
+                  <p className="text-xs text-gray-500">Утас:</p>
                   <p className="font-medium text-gray-800">{selectedCardWeb ? selectedCardWeb : "Not selected"}</p>
                 </div>
               </div>
@@ -434,9 +485,15 @@ const Section3 = () => {
                     <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                     </svg>
+                   
                   </>
                 )}
               </button>
+              <PaymentModal
+  isOpen={showPaymentModal}
+  onClose={() => setShowPaymentModal(false)}
+  onConfirm={handleConfirmPayment}
+/>
             </div>
           </div>
         )}

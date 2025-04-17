@@ -44,13 +44,13 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           if (userSnap.exists()) {
             const data = userSnap.data();
             setUserName(data.name || "User");
-            setIsAdmin(data.isAdmin === true); // ✅ Set isAdmin
+            setIsAdmin(data.isAdmin === true); 
           } else {
             setUserName("User");
             setIsAdmin(false);
           }
         } catch (err) {
-          console.error("❌ Error fetching user info:", err);
+          console.error(" Error fetching user info:", err);
           setUserName("User");
           setIsAdmin(false);
         }
@@ -59,8 +59,6 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         setUserName(null);
         setIsAdmin(false);
       }
-  
-      // ✅ Always stop loading regardless of login state
       setAuthLoading(false);
     });
   

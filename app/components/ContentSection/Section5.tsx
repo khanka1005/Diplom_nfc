@@ -50,8 +50,8 @@ const Section5 = ({ canvasState, onCanvasUpdate }: Section5Props) => {
 const [backgroundColor, setBackgroundColor] = useState("#424ddf");
 
   const [userInfo, setUserInfo] = useState({
-    name: "Your Name",
-    profession: "Your Profession",
+    name: "Нэрээ оруулна уу!",
+    profession: "Нэмэлт мэдээлэл",
     phone: "",
     email: "",
   });
@@ -165,6 +165,7 @@ iphoneCanvas.sendObjectToBack(bgRect);
     const nameText = new fabric.Textbox(userInfo.name, {
       left: 125,
       top: 160,
+      fill: "#ffffff",
       width: 200,
       fontSize: 24,
       fontWeight: "bold",
@@ -177,6 +178,7 @@ iphoneCanvas.sendObjectToBack(bgRect);
     // Profession text
     const professionText = new fabric.Textbox(userInfo.profession, {
       left: 125,
+      fill: "#ffffff",
       top: 190,
       width: 200,
       fontSize: 16,
@@ -200,7 +202,7 @@ iphoneCanvas.sendObjectToBack(bgRect);
       phone: userInfo.phone,
     });
     callButton.set({ phone: userInfo.phone });
-    const callText = new fabric.Text("📞 Call", {
+    const callText = new fabric.Text("📞 Залгах", {
       left: 60,
       top: 242,
       fontSize: 16,
@@ -208,7 +210,7 @@ iphoneCanvas.sendObjectToBack(bgRect);
       originX: "center",
       styles: {
         0: {
-          0: { fontSize: 16 }  // First character only
+          0: { fontSize: 16 }  
         }
       },
       selectable: false,
@@ -229,7 +231,7 @@ iphoneCanvas.sendObjectToBack(bgRect);
       email: userInfo.email, 
     });
     emailButton.set({ email: userInfo.email });
-    const emailText = new fabric.Text("✉ Email", {
+    const emailText = new fabric.Text("✉ Емайл хаяг", {
       left: 190,
       top: 232,
       fontSize: 16,
@@ -237,7 +239,7 @@ iphoneCanvas.sendObjectToBack(bgRect);
       originX: "center",
       styles: {
         0: {
-          0: { fontSize: 27 }  // First character only
+          0: { fontSize: 28 }  // First character only
         }
       },
       selectable: false,
@@ -378,7 +380,7 @@ iphoneCanvas.sendObjectToBack(bgRect);
     const saveContactButton = new fabric.Rect({
       width: 160,
       height: 40,
-      fill: "#6c757d",
+      fill: "#2c33e9",
       rx: 10,
       ry: 10,
       left: 125,
@@ -387,7 +389,7 @@ iphoneCanvas.sendObjectToBack(bgRect);
       selectable: false,
       evented: true,
     });
-    const saveContactText = new fabric.Text("Save Contact", {
+    const saveContactText = new fabric.Text("Contact хадгалах", {
       left: 125,
       top: 375,
       fontSize: 16,
@@ -783,11 +785,11 @@ console.log("✅ vCard present in canvas JSON:", hasVcard);
 
       {/* Form controls */}
       <div className="w-full md:w-[400px] flex flex-col gap-4 p-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-xl font-bold mb-2">Customize Your Business Card</h2>
+        <h2 className="text-xl font-bold mb-2">Цахим нэрийн хуудас</h2>
 
         {/* Profile image upload */}
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Profile Image</label>
+          <label className="block text-sm font-medium mb-1">Нүүр зураг</label>
           <input
             type="file"
             accept="image/*"
@@ -798,29 +800,29 @@ console.log("✅ vCard present in canvas JSON:", hasVcard);
 
         {/* Basic info */}
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Name</label>
+          <label className="block text-sm font-medium mb-1">Нэр</label>
           <input
             type="text"
             value={userInfo.name}
             onChange={(e) => handleUserInfoChange("name", e.target.value)}
             className="w-full border p-2 rounded-md"
-            placeholder="Your Name"
+            placeholder="Нэр"
           />
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Profession</label>
+          <label className="block text-sm font-medium mb-1">Нэмэлт мэдээлэл</label>
           <input
             type="text"
             value={userInfo.profession}
             onChange={(e) => handleUserInfoChange("profession", e.target.value)}
             className="w-full border p-2 rounded-md"
-            placeholder="Your Profession"
+            placeholder="Нэмэлт мэдээлэл"
           />
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Phone Number</label>
+          <label className="block text-sm font-medium mb-1">Утасны дугаар</label>
           <input
             type="tel"
             value={userInfo.phone}
@@ -831,7 +833,7 @@ console.log("✅ vCard present in canvas JSON:", hasVcard);
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Email</label>
+          <label className="block text-sm font-medium mb-1">Емайл хаяг</label>
           <input
             type="email"
             value={userInfo.email}
@@ -844,7 +846,7 @@ console.log("✅ vCard present in canvas JSON:", hasVcard);
         {/* Social links */}
         <div className="mb-4">
           <div className="flex justify-between items-center mb-2">
-            <h3 className="font-medium">Social Links</h3>
+            <h3 className="font-medium">Сошиал линк</h3>
             <div className="relative">
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}

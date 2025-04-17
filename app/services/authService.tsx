@@ -5,9 +5,6 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "fire
 export const loginUser = async (email: string, password: string) => {
   const auth = getAuthClient();
   const userCredential = await signInWithEmailAndPassword(auth, email, password);
-
-  // ✅ Ensure Firestore is online
-  const db = getFirestoreClient();
   try {
   
   } catch (err) {
