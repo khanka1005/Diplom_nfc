@@ -1,19 +1,16 @@
 "use client";
-
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import * as fabric from "fabric";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-
 type UserInfo = {
   name: string;
   profession: string;
   phone: string;
   email: string;
 };
-
 type CardData = {
   userId: string;
   timestamp: any;
@@ -22,11 +19,9 @@ type CardData = {
   previewImage: string;
   backgroundColorHex?: string;
 };
-
 const CardViewPage = () => {
   const params = useParams();
   const cardId = params.id as string;
-
   const canvasRef = useRef<fabric.Canvas | null>(null);
   const canvasElRef = useRef<HTMLCanvasElement | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,7 +29,6 @@ const CardViewPage = () => {
   const [error, setError] = useState<string | null>(null);
   const db = getFirestore();
   const isProcessingClick = useRef(false);
-
   useEffect(() => {
     const fetchCardData = async () => {
       if (!cardId) {
@@ -42,17 +36,14 @@ const CardViewPage = () => {
         setLoading(false);
         return;
       }
-
       try {
         const cardRef = doc(db, "card_public", cardId);
         const cardSnapshot = await getDoc(cardRef);
-
         if (!cardSnapshot.exists()) {
           setError("Card not found");
           setLoading(false);
           return;
         }
-
         const data = cardSnapshot.data() as CardData;
         setCardData(data);
         setLoading(false);
@@ -62,20 +53,16 @@ const CardViewPage = () => {
         setLoading(false);
       }
     };
-
     fetchCardData();
   }, [cardId, db]);
-
   useEffect(() => {
     if (!canvasElRef.current || !cardData) return;
-
     const canvas = new fabric.Canvas(canvasElRef.current, {
       width: window.innerWidth,
       height: window.innerHeight,
       selectable: false,
       skipTargetFind: false,
     });
-
     fabric.Object.prototype.toObject = (function (toObject) {
       return function (this: fabric.Object, ...args: any[]) {
         const result = toObject.call(this, ...args);
@@ -88,9 +75,7 @@ const CardViewPage = () => {
         };
       };
     })(fabric.Object.prototype.toObject);
-
     canvasRef.current = canvas;
-
     // Disable zoom/pinch for better mobile handling
     requestAnimationFrame(() => {
       const upperCanvas = canvas.upperCanvasEl;
@@ -105,7 +90,6 @@ const CardViewPage = () => {
         (upperCanvas.style as any)["-webkit-tap-highlight-color"] = "transparent";
       }
     });
-
     const loadCanvasState = async () => {
       try {
         // Set parent div background color first (this will show even if canvas is loading)
@@ -176,7 +160,6 @@ const CardViewPage = () => {
             console.warn("❌ No vCard field found in any object.");
           }
           const parsed = JSON.parse(cardData.canvasData);
-
           // Check if any object contains the vcard field
           const hasVcard = parsed.objects.some((obj: any) => obj.vcard);
           
@@ -186,14 +169,12 @@ const CardViewPage = () => {
             const vcardObject = parsed.objects.find((obj: any) => obj.vcard);
             console.log("📇 vCard content:", vcardObject.vcard);
           }
-
           setTimeout(() => {
             canvas.selection = false;
             canvas.discardActiveObject();
     
             // ... rest of your interaction logic remains unchanged
     
-
             type ActionType = "url" | "phone" | "email";
             const handleAction = (type: ActionType, value: string) => {
               // Prevent multiple rapid clicks
@@ -254,14 +235,12 @@ const CardViewPage = () => {
                 handleAction("email", email);
               }
             });
-
             // Make objects interactive but not selectable
             canvas.forEachObject((obj) => {
               obj.selectable = false;
               obj.evented = true;
               obj.hoverCursor = "pointer";
             });
-
             canvas.renderAll();
           }, 300);
         });
@@ -270,9 +249,7 @@ const CardViewPage = () => {
         toast.error("Failed to render card design");
       }
     };
-
     loadCanvasState();
-
     // Handle resize for mobile responsiveness
     const handleResize = () => {
       if (canvasRef.current) {
@@ -300,15 +277,12 @@ const CardViewPage = () => {
         canvas.renderAll();
       }
     };
-
     window.addEventListener('resize', handleResize);
-
     return () => {
       window.removeEventListener('resize', handleResize);
       canvas.dispose();
     };
   }, [cardData]);
-
   if (loading) {
     return (
       <div className="flex w-full h-screen justify-center items-center">
@@ -316,7 +290,6 @@ const CardViewPage = () => {
       </div>
     );
   }
-
   if (error) {
     return (
       <div className="flex w-full h-screen justify-center items-center">
@@ -324,7 +297,6 @@ const CardViewPage = () => {
       </div>
     );
   }
-
   return (
     <div className="flex w-full min-h-screen justify-center items-center overflow-hidden">
       <ToastContainer position="bottom-right" autoClose={3000} />
@@ -333,5 +305,4 @@ const CardViewPage = () => {
     </div>
   );
 };
-
 export default CardViewPage;
