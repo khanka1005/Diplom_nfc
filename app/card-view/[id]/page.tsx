@@ -22,6 +22,7 @@ type CardData = {
   canvasData: string;
   previewImage: string;
   backgroundColorHex?: string;
+  vcard?: string;
 };
 
 const CardViewPage = () => {
@@ -57,6 +58,9 @@ const CardViewPage = () => {
 
         const data = cardSnapshot.data() as CardData;
         setCardData(data);
+        
+console.log("📥 vCard fetched from Firestore:", data.vcard?.substring(0, 100) + "...");
+setCardData(data);
         setLoading(false);
       } catch (err) {
         console.error("Error fetching card data:", err);
@@ -164,7 +168,8 @@ if (cardData.backgroundColorHex) {
         canvas.loadFromJSON(parsedData, () => {
           // Apply zoom transformation
           canvas.setZoom(scale);
-          
+
+    
           // Center horizontally
           const horizontalOffset = (fullWidth - (originalWidth * scale)) / 2;
           
@@ -185,24 +190,7 @@ if (cardData.backgroundColorHex) {
           
           canvas.renderAll();
           
-          // Check for vCard objects
-          const objectsWithVcard = canvas.getObjects().filter((obj) => (obj as any).vcard);
-          console.log("🧾 Found vCard object(s):", objectsWithVcard);
-          if (objectsWithVcard.length > 0) {
-            console.log("🧾 Found vCard object(s):", objectsWithVcard);
-          } else {
-            console.warn("❌ No vCard field found in any object.");
-          }
-          
-          const parsed = JSON.parse(cardData.canvasData);
-          const hasVcard = parsed.objects.some((obj: any) => obj.vcard);
-          
-          console.log("vCard exists in canvasData:", hasVcard);
-          
-          if (hasVcard) {
-            const vcardObject = parsed.objects.find((obj: any) => obj.vcard);
-            console.log("📇 vCard content:", vcardObject.vcard);
-          }
+         
 
           setTimeout(() => {
             canvas.selection = false;
@@ -244,20 +232,23 @@ if (cardData.backgroundColorHex) {
               const phone = (obj as any).phone;
               const email = (obj as any).email;
               const url = (obj as any).url;
-              const vcard = (obj as any).vcard;
-              
-              if (vcard) {
-                // Download vCard (.vcf)
-                const blob = new Blob([vcard], { type: "text/vcard;charset=utf-8" });
+              if (
+                ((obj as any).id === "saveText" || ((obj as any).type === "rect" && (obj as any).width === 160)) &&
+                cardData.vcard
+              ) {
+                const blob = new Blob([cardData.vcard], { type: "text/vcard;charset=utf-8" });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = url;
                 a.download = "contact.vcf";
                 a.click();
                 URL.revokeObjectURL(url);
+                toast.success("Contact downloaded!");
                 return;
               }
-              
+
+
+
               if (url) {
                 handleAction("url", url);
               } else if (phone) {

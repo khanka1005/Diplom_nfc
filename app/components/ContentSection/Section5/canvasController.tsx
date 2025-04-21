@@ -330,9 +330,6 @@ export const useCanvasController = ({
       Facebook: "https://img.icons8.com/?size=100&id=118466&format=png&color=000000",
       Instagram: "https://img.icons8.com/?size=100&id=32292&format=png&color=000000",
       Twitter: "https://img.icons8.com/?size=100&id=6Fsj3rv2DCmG&format=png&color=000000",
-      LinkedIn: "https://cdn-icons-png.flaticon.com/512/3536/3536505.png",
-      YouTube: "https://cdn-icons-png.flaticon.com/512/1384/1384060.png",
-      Pinterest: "https://cdn-icons-png.flaticon.com/512/145/145808.png",
     };
   
     socialLinks.forEach((link, index) => {
@@ -441,78 +438,10 @@ export const useCanvasController = ({
       originX: "center",
       originY: "center",
       selectable: false,
-      evented: false,
+      evented: false, // 👈 not clickable in editor
     });
   
-    saveBtn.on("mousedown", () => {
-      const imageMatch = profileImageBase64Ref.current?.match(/^data:(image\/[a-zA-Z]+);base64,(.*)$/);
-      const mimeType = imageMatch?.[1] || "image/jpeg";
-      const imageData = imageMatch?.[2];
-  
-      const wrapVcardBase64 = (str: string) =>
-        str?.match(/.{1,75}/g)?.join("\r\n ") ?? "";
-  
-      const fullName = userInfo.name.trim();
-      let firstName = "";
-      let lastName = "";
-  
-      if (fullName.includes(" ")) {
-        const parts = fullName.split(" ");
-        firstName = parts[0];
-        lastName = parts.slice(1).join(" ");
-      } else {
-        firstName = fullName;
-      }
-  
-      const vcardLines = [
-        "BEGIN:VCARD",
-        "VERSION:3.0",
-        `FN:${fullName}`,
-        `N:${lastName};${firstName};;;`, // proper structured name
-        `TITLE:${userInfo.profession}`,
-      ];
-  
-      if (userInfo.companyName) {
-        vcardLines.push(`ORG:${userInfo.companyName}`);
-      }
-  
-      vcardLines.push(`TEL:${userInfo.phone}`);
-      vcardLines.push(`EMAIL:${userInfo.email}`);
-  
-      if (userInfo.address) {
-        vcardLines.push(`ADR:;;${userInfo.address};;;`);
-      }
-  
-      if (userInfo.website) {
-        vcardLines.push(`URL:${userInfo.website}`);
-      }
-  
-      socialLinks.forEach(link => {
-        vcardLines.push(`X-SOCIALPROFILE;TYPE=${link.platform}:${link.url}`);
-      });
-  
-      if (imageData && imageData.length > 100) {
-        vcardLines.push(`PHOTO;ENCODING=b;TYPE=${mimeType.toUpperCase()}:${wrapVcardBase64(imageData)}`);
-      }
-  
-      vcardLines.push("END:VCARD");
-      const vcard = vcardLines.join("\r\n");
-  
-      // Save vCard to the button and text (for cardViewPage usage)
-      (saveBtn as any).vcard = vcard;
-      (saveText as any).vcard = vcard;
-  
-      const blob = new Blob([vcard], { type: "text/vcard;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-  
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${fullName}.vcf`;
-      a.click();
-      URL.revokeObjectURL(url);
-  
-      toast.success("Contact saved to your device");
-    });
+    // ✅ No click logic here — keep button for styling only
   
     canvas.add(saveBtn, saveText);
   };

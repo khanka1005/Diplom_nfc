@@ -25,30 +25,31 @@ export const saveCardToFirestore = async ({
   const auth = getAuthClient();
   const db = getFirestoreClient();
 
-  // Find save button in canvas
-  const saveContactObj = canvas.getObjects().find(
-    (obj) =>
-      obj instanceof fabric.Rect &&
-      obj.width === 160 &&
-      obj.height === 40 &&
-      obj.fill === backgroundColor
-  );
-
-  if (saveContactObj && profileImageBase64) {
-    const imageMatch = profileImageBase64.match(
-      /^data:(image\/[a-zA-Z]+);base64,(.*)$/
-    );
+  // ✅ Generate vCard independently (NOT embedded in canvas)
+  let vcard = "";
+  if (profileImageBase64) {
+    const imageMatch = profileImageBase64.match(/^data:(image\/[a-zA-Z]+);base64,(.*)$/);
     const mimeType = imageMatch?.[1] || "image/jpeg";
     const imageData = imageMatch?.[2];
 
     const wrapVcardBase64 = (str: string) =>
       str?.match(/.{1,75}/g)?.join("\r\n ") ?? "";
 
+    const fullName = userInfo.name.trim();
+    let firstName = "", lastName = "";
+    if (fullName.includes(" ")) {
+      const parts = fullName.split(" ");
+      firstName = parts[0];
+      lastName = parts.slice(1).join(" ");
+    } else {
+      firstName = fullName;
+    }
+
     const vcardLines = [
       "BEGIN:VCARD",
       "VERSION:3.0",
-      `FN:${userInfo.name}`,
-      `N:${userInfo.name};;;;`,
+      `FN:${fullName}`,
+      `N:${lastName};${firstName};;;`,
       `TITLE:${userInfo.profession}`,
     ];
 
@@ -75,21 +76,15 @@ export const saveCardToFirestore = async ({
 
     if (imageData && imageData.length > 100) {
       vcardLines.push(
-        `PHOTO;ENCODING=b;TYPE=${mimeType.toUpperCase()}:${wrapVcardBase64(
-          imageData
-        )}`
+        `PHOTO;ENCODING=b;TYPE=${mimeType.toUpperCase()}:${wrapVcardBase64(imageData)}`
       );
     }
 
     vcardLines.push("END:VCARD");
-
-    const vcard = vcardLines.join("\r\n");
-
-    // Attach vCard to canvas object
-    (saveContactObj as any).vcard = vcard;
+    vcard = vcardLines.join("\r\n");
   }
 
-  // Clean canvas JSON
+  // ✅ Clean canvas JSON to avoid large data
   const json = canvas.toJSON();
   const sanitizedJson = {
     version: json.version,
@@ -106,7 +101,7 @@ export const saveCardToFirestore = async ({
     onCanvasUpdate(JSON.stringify(sanitizedJson));
   }
 
-  // Save to Firestore after auth state is ready
+  // ✅ Save to Firestore once authenticated
   const unsubscribe = onAuthStateChanged(auth, async (user) => {
     unsubscribe();
     if (!user) {
@@ -115,6 +110,7 @@ export const saveCardToFirestore = async ({
     }
 
     try {
+      const db = getFirestoreClient();
       const userRef = doc(db, "users", user.uid);
 
       const payload = {
@@ -127,12 +123,10 @@ export const saveCardToFirestore = async ({
         backgroundColorHex: backgroundColor,
         accentColorHex: accentColor ?? "#4da6bc",
         profileImage: profileImageBase64,
+        vcard, // ✅ Save vCard separately
       };
 
-      // Save to personal collection
       await addDoc(collection(userRef, "card_web"), payload);
-
-      // Save to public view
       const publicRef = await addDoc(collection(db, "card_public"), payload);
 
       const shareUrl = `${window.location.origin}/card-view/${publicRef.id}`;
