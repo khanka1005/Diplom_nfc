@@ -187,6 +187,7 @@ if (cardData.backgroundColorHex) {
           
           // Check for vCard objects
           const objectsWithVcard = canvas.getObjects().filter((obj) => (obj as any).vcard);
+          console.log("🧾 Found vCard object(s):", objectsWithVcard);
           if (objectsWithVcard.length > 0) {
             console.log("🧾 Found vCard object(s):", objectsWithVcard);
           } else {

@@ -418,7 +418,6 @@ export const useCanvasController = ({
   };
 
   const addSaveContactButton = (canvas: fabric.Canvas) => {
-    // Save contact button
     const saveBtn = new fabric.Rect({
       width: 160,
       height: 40,
@@ -436,8 +435,8 @@ export const useCanvasController = ({
       left: CARD_WIDTH / 2,
       top: 510,
       fontSize: 16,
-      fontFamily: 'Arial',
-      fontWeight: 'bold',
+      fontFamily: "Arial",
+      fontWeight: "bold",
       fill: "#000000",
       originX: "center",
       originY: "center",
@@ -453,28 +452,41 @@ export const useCanvasController = ({
       const wrapVcardBase64 = (str: string) =>
         str?.match(/.{1,75}/g)?.join("\r\n ") ?? "";
   
+      const fullName = userInfo.name.trim();
+      let firstName = "";
+      let lastName = "";
+  
+      if (fullName.includes(" ")) {
+        const parts = fullName.split(" ");
+        firstName = parts[0];
+        lastName = parts.slice(1).join(" ");
+      } else {
+        firstName = fullName;
+      }
+  
       const vcardLines = [
         "BEGIN:VCARD",
         "VERSION:3.0",
-        `FN:${userInfo.name}`,
+        `FN:${fullName}`,
+        `N:${lastName};${firstName};;;`, // proper structured name
         `TITLE:${userInfo.profession}`,
       ];
-
+  
       if (userInfo.companyName) {
         vcardLines.push(`ORG:${userInfo.companyName}`);
       }
-
+  
       vcardLines.push(`TEL:${userInfo.phone}`);
       vcardLines.push(`EMAIL:${userInfo.email}`);
-      
+  
       if (userInfo.address) {
         vcardLines.push(`ADR:;;${userInfo.address};;;`);
       }
-      
+  
       if (userInfo.website) {
         vcardLines.push(`URL:${userInfo.website}`);
       }
-      
+  
       socialLinks.forEach(link => {
         vcardLines.push(`X-SOCIALPROFILE;TYPE=${link.platform}:${link.url}`);
       });
@@ -486,15 +498,19 @@ export const useCanvasController = ({
       vcardLines.push("END:VCARD");
       const vcard = vcardLines.join("\r\n");
   
+      // Save vCard to the button and text (for cardViewPage usage)
+      (saveBtn as any).vcard = vcard;
+      (saveText as any).vcard = vcard;
+  
       const blob = new Blob([vcard], { type: "text/vcard;charset=utf-8" });
       const url = URL.createObjectURL(blob);
   
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${userInfo.name}.vcf`;
+      a.download = `${fullName}.vcf`;
       a.click();
       URL.revokeObjectURL(url);
-      
+  
       toast.success("Contact saved to your device");
     });
   

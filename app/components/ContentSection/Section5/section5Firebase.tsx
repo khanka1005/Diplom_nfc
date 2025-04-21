@@ -1,9 +1,7 @@
-// section5Firebase.ts
 import { getAuthClient, getFirestoreClient } from "@/firebaseConfig";
 import { collection, addDoc, doc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { toast } from "react-toastify";
-
 import * as fabric from "fabric";
 import { SocialLink, UserInfo } from "./section5Types";
 
@@ -21,53 +19,80 @@ export const saveCardToFirestore = async ({
   socialLinks: SocialLink[];
   profileImageBase64: string | null;
   backgroundColor: string;
-  accentColor?: string; 
+  accentColor?: string;
   onCanvasUpdate?: (state: string) => void;
 }) => {
   const auth = getAuthClient();
   const db = getFirestoreClient();
 
-  const saveContactObj = canvas.getObjects().find(
+  // Detect the save contact button
+  const saveBtn = canvas.getObjects().find(
     (obj) =>
       obj instanceof fabric.Rect &&
       obj.width === 160 &&
       obj.height === 40 &&
-      obj.fill === "#2c33e9"
+      obj.top === 490
   );
 
-  if (saveContactObj && profileImageBase64) {
-    const imageMatch = profileImageBase64.match(
-      /^data:(image\/[a-zA-Z]+);base64,(.*)$/
-    );
+  if (saveBtn && profileImageBase64) {
+    const imageMatch = profileImageBase64.match(/^data:(image\/[a-zA-Z]+);base64,(.*)$/);
     const mimeType = imageMatch?.[1] || "image/jpeg";
     const imageData = imageMatch?.[2];
 
     const wrapVcardBase64 = (str: string) =>
       str?.match(/.{1,75}/g)?.join("\r\n ") ?? "";
-
+      const fullName = userInfo.name.trim();
+      let firstName = "";
+      let lastName = "";
+  
+      if (fullName.includes(" ")) {
+        const parts = fullName.split(" ");
+        firstName = parts[0];
+        lastName = parts.slice(1).join(" ");
+      } else {
+        firstName = fullName;
+      }
     const vcardLines = [
       "BEGIN:VCARD",
       "VERSION:3.0",
       `FN:${userInfo.name}`,
+      `N:${lastName};${firstName};;;`,
       `TITLE:${userInfo.profession}`,
-      `TEL:${userInfo.phone}`,
-      `EMAIL:${userInfo.email}`,
     ];
+
+    if (userInfo.companyName) {
+      vcardLines.push(`ORG:${userInfo.companyName}`);
+    }
+
+    vcardLines.push(`TEL:${userInfo.phone}`);
+    vcardLines.push(`EMAIL:${userInfo.email}`);
+
+    if (userInfo.address) {
+      vcardLines.push(`ADR:;;${userInfo.address};;;`);
+    }
+
+    if (userInfo.website) {
+      vcardLines.push(`URL:${userInfo.website}`);
+    }
+
+    socialLinks.forEach((link) => {
+      vcardLines.push(`X-SOCIALPROFILE;TYPE=${link.platform}:${link.url}`);
+    });
 
     if (imageData && imageData.length > 100) {
       vcardLines.push(
-        `PHOTO;ENCODING=b;TYPE=${mimeType.toUpperCase()}:${wrapVcardBase64(
-          imageData
-        )}`
+        `PHOTO;ENCODING=b;TYPE=${mimeType.toUpperCase()}:${wrapVcardBase64(imageData)}`
       );
     }
 
     vcardLines.push("END:VCARD");
     const vcard = vcardLines.join("\r\n");
 
-    (saveContactObj as any).vcard = vcard;
+    // Assign to button for CardViewPage to detect
+    (saveBtn as any).vcard = vcard;
   }
 
+  // Prepare canvas export data
   const json = canvas.toJSON();
   const sanitizedJson = {
     version: json.version,
@@ -113,9 +138,9 @@ export const saveCardToFirestore = async ({
       const publicRef = await addDoc(collection(db, "card_public"), payload);
 
       const shareUrl = `${window.location.origin}/card-view/${publicRef.id}`;
-      toast.success(`Card saved! Ready to write to NFC:\n${shareUrl}`);
+      toast.success(`Карт амжилттай хадгалагдлаа:\n${shareUrl}`);
     } catch (error) {
-      console.error("Error saving to Firestore:", error);
+      console.error("❌ Error saving to Firestore:", error);
       toast.error("Failed to save data.");
     }
   });
