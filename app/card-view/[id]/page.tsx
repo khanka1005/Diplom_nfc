@@ -69,16 +69,7 @@ const CardViewPage = () => {
   }, [cardId, db]);
 
   useEffect(() => {
-    // Set full viewport background color as soon as data is available
-    if (cardData?.backgroundColorHex && containerRef.current) {
-      document.body.style.backgroundColor = cardData.backgroundColorHex;
-      document.body.style.margin = "0";
-      document.body.style.padding = "0";
-      document.body.style.overflow = "hidden";
-      document.documentElement.style.backgroundColor = cardData.backgroundColorHex;
-      
-      containerRef.current.style.backgroundColor = cardData.backgroundColorHex;
-    }
+    
   }, [cardData]);
 
   useEffect(() => {
@@ -153,10 +144,7 @@ const CardViewPage = () => {
        // Apply background color to the entire viewport
 if (cardData.backgroundColorHex) {
   canvas.backgroundColor = cardData.backgroundColorHex;
-  if (containerRef.current) {
-    containerRef.current.style.backgroundColor = cardData.backgroundColorHex;
-  }
-  document.body.style.backgroundColor = cardData.backgroundColorHex;
+ 
 }
         
         const parsedData = JSON.parse(cardData.canvasData);
@@ -190,23 +178,10 @@ if (cardData.backgroundColorHex) {
           canvas.viewportTransform[5] = verticalOffset;
           
           // Create a full-viewport background rectangle
-          const bgRect = new fabric.Rect({
-            left: -horizontalOffset / scale,
-            top: -verticalOffset / scale, // Compensate for the vertical offset
-            width: fullWidth / scale + 100, // Add extra width for safe measure
-            height: fullHeight / scale + 100, // Add extra height for safe measure
-            fill: cardData.backgroundColorHex || "#ffffff",
-            selectable: false,
-            evented: false,
-            excludeFromExport: true,
-          });
+          
           
           // Add a special property to identify this as our background
-          (bgRect as any).isBackground = true;
-          
-          // Add and send to back
-          canvas.add(bgRect);
-          canvas.sendObjectToBack(bgRect);
+         
           
           canvas.renderAll();
           
@@ -391,7 +366,7 @@ if (cardData.backgroundColorHex) {
       <div 
         ref={containerRef}
         className="fixed inset-0 w-screen h-screen overflow-hidden"
-        style={{ backgroundColor: cardData?.backgroundColorHex || '#ffffff' }}
+       
       >
         <ToastContainer position="bottom-right" autoClose={3000} />
         <canvas 
