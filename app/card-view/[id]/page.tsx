@@ -232,22 +232,17 @@ if (cardData.backgroundColorHex) {
               const phone = (obj as any).phone;
               const email = (obj as any).email;
               const url = (obj as any).url;
-              if (
-                ((obj as any).id === "saveText" || ((obj as any).type === "rect" && (obj as any).width === 160)) &&
-                cardData.vcard
-              ) {
-                const blob = new Blob([cardData.vcard], { type: "text/vcard;charset=utf-8" });
+              if ((obj as any).vcard) {
+                const blob = new Blob([(obj as any).vcard], { type: "text/vcard;charset=utf-8" });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = url;
                 a.download = "contact.vcf";
                 a.click();
                 URL.revokeObjectURL(url);
-                toast.success("Contact downloaded!");
+               
                 return;
               }
-
-
 
               if (url) {
                 handleAction("url", url);
@@ -266,6 +261,30 @@ if (cardData.backgroundColorHex) {
             });
 
             canvas.renderAll();
+            if (cardData.vcard) {
+              const objects = canvas.getObjects();
+              
+              const saveBtn = objects.find(
+                (obj) => obj.type === "rect" && (obj as any).width === 160 && (obj as any).height === 40
+              );
+              const saveText = objects.find(
+                (obj) => obj.type === "text" && (obj as any).text?.includes("Контакт хадгалах")
+              );
+            
+              if (saveBtn) {
+                (saveBtn as any).vcard = cardData.vcard;
+                
+              } else {
+                console.warn("❌ saveBtn not found");
+              }
+            
+              if (saveText) {
+                (saveText as any).vcard = cardData.vcard;
+                
+              } else {
+                console.warn("❌ saveText not found");
+              }
+            }
           }, 300);
         });
       } catch (err) {
