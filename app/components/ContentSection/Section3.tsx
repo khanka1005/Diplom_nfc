@@ -27,6 +27,7 @@ const Section3 = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [latestOrderId, setLatestOrderId] = useState<string | null>(null);
 
   const [userData, setUserData] = useState({
     fullName: "",
@@ -164,36 +165,31 @@ const Section3 = () => {
   const closePreview = () => {
     setPreviewImage(null);
   };
-  const handleConfirmPayment = async ({ method, quantity, total }: { method: string; quantity: number; total: number }) => {
-    setShowPaymentModal(false); // Close modal
+  const handleConfirmPayment = async ({
+    method,
+    quantity,
+    total,
+  }: {
+    method: string;
+    quantity: number;
+    total: number;
+  }) => {
+    setShowPaymentModal(false);
   
     const auth = getAuthClient();
     const db = getFirestoreClient();
     const user = auth.currentUser;
-    if (!user) return;
+  
+    if (!user || !latestOrderId) {
+      toast.error("Missing user or order ID.");
+      return;
+    }
   
     try {
       setIsSubmitting(true);
-      const cardViewDoc = await getDoc(doc(db, "users", user.uid, "card_view", selectedCardView));
-      const cardWebDoc = await getDoc(doc(db, "users", user.uid, "card_web", selectedCardWeb));
-  
-      const publicRef = await addDoc(collection(db, "card_public"), cardWebDoc.data());
-      const iphoneUrl = `${window.location.origin}/card-view/${publicRef.id}`;
-  
-      const orderRef = await addDoc(collection(db, "order"), {
-        userId: user.uid,
-        ...userData,
-        cardViewData: cardViewDoc.data()?.cardBase,
-        cardViewPreview: cardViewDoc.data()?.previewImage || "",
-        cardWebData: cardWebDoc.data()?.canvasData,
-        cardWebPreview: cardWebDoc.data()?.previewImage || "",
-        iphone_url: iphoneUrl,
-        order_status: false,
-        createdAt: new Date().toISOString(),
-      });
-      console.log("Order ID:", orderRef.id);
-      // Save payment info
-      const paymentRef = collection(db, "order", orderRef.id, "payment");
+      
+      // ✅ Save payment only, don't re-add the order
+      const paymentRef = collection(db, "order", latestOrderId, "payment");
       await addDoc(paymentRef, {
         method,
         quantity,
@@ -203,12 +199,13 @@ const Section3 = () => {
         createdAt: new Date().toISOString(),
       });
   
-      toast.success("Захиалга амжилттай илгээгдлээ!");
+      toast.success("Төлбөрийн мэдээлэл амжилттай хадгалагдлаа!");
       setShowDesignModal(false);
       setSelectedCardView("");
       setSelectedCardWeb("");
+      setLatestOrderId(null); // reset for future orders
     } catch (err) {
-      toast.error("Алдаа гарлаа.");
+      toast.error("Төлбөр хадгалахад алдаа гарлаа.");
       console.error(err);
     } finally {
       setIsSubmitting(false);
