@@ -1,11 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState, useRef } from "react";
 import {
   BsChevronDown,
   BsPersonVcard,
   BsPlus,
 } from "react-icons/bs";
+import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { Section5FormProps } from "./section5Types";
 
 const Section5Form: React.FC<Section5FormProps> = ({
@@ -25,6 +26,49 @@ const Section5Form: React.FC<Section5FormProps> = ({
   onBackgroundColorChange,
   onAccentColorChange,
 }) => {
+  const [isSaving, setIsSaving] = useState(false);
+  const [imageError, setImageError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle image validation and upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setImageError("");
+    
+    if (!file) return;
+
+    // Create an image object to check dimensions
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    
+    img.onload = () => {
+      // Check if image dimensions are within limits
+      if (img.width > 1000 || img.height > 1000) {
+        setImageError("Image must be less than 1000x1000 pixels");
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+        URL.revokeObjectURL(img.src);
+        return;
+      }
+      
+      // Image is valid, proceed with upload
+      URL.revokeObjectURL(img.src);
+      onImageUpload(e);
+    };
+  };
+
+  // Handle save with loading state
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1500)); // simulate save delay
+      await onSaveClick();
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="w-full md:w-[400px] flex flex-col gap-4 p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-xl font-bold mb-2">Цахим нэрийн хуудас</h2>
@@ -33,11 +77,15 @@ const Section5Form: React.FC<Section5FormProps> = ({
       <div>
         <label className="block text-sm font-medium mb-1">Нүүр зураг</label>
         <input
+          ref={fileInputRef}
           type="file"
           accept="image/*"
-          onChange={onImageUpload}
+          onChange={handleImageUpload}
           className="w-full border p-2 rounded-md cursor-pointer"
         />
+        {imageError && (
+          <p className="text-red-500 text-sm mt-1">{imageError}</p>
+        )}
       </div>
 
       {/* 🧑‍💼 User Info */}
@@ -152,10 +200,20 @@ const Section5Form: React.FC<Section5FormProps> = ({
 
       {/* 💾 Save */}
       <button
-        onClick={onSaveClick}
+        onClick={handleSave}
+        disabled={isSaving}
         className="bg-gray-800 text-white py-3 px-4 rounded-md mt-4 w-full flex items-center justify-center gap-2"
       >
-        <BsPersonVcard size={16} /> Загвар хадгалах
+        {isSaving ? (
+          <>
+            <AiOutlineLoading3Quarters size={16} className="animate-spin" /> 
+            Хадгалж байна...
+          </>
+        ) : (
+          <>
+            <BsPersonVcard size={16} /> Загвар хадгалах
+          </>
+        )}
       </button>
     </div>
   );
