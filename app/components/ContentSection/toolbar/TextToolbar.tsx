@@ -103,7 +103,7 @@ const TextToolbar: React.FC<TextToolbarProps> = ({ canvasRef }) => {
 
   return (
     <div className="p-4 bg-white border rounded-lg">
-      <h3 className="text-lg font-bold mb-4">🖋️ Text Settings</h3>
+      <h3 className="text-lg font-bold mb-4">🖋️ Текст</h3>
 
       {/* Add and Delete Buttons */}
       <div className="mb-2">
@@ -111,7 +111,7 @@ const TextToolbar: React.FC<TextToolbarProps> = ({ canvasRef }) => {
           onClick={addTextToCanvas}
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 w-40"
         >
-          ➕ Add Text
+          ➕ Текст нэмэх
         </button>
 
         {selectedText && (
@@ -119,7 +119,7 @@ const TextToolbar: React.FC<TextToolbarProps> = ({ canvasRef }) => {
             onClick={deleteSelectedText}
             className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 w-40"
           >
-            🗑️ Delete Text
+            🗑️ Текст устгах
           </button>
         )}
       </div>
@@ -128,7 +128,7 @@ const TextToolbar: React.FC<TextToolbarProps> = ({ canvasRef }) => {
         <>
           {/* Font Size */}
           <div className="mb-4">
-            <label>Font Size: </label>
+            <label>Үсэгний хэмжээ: </label>
             <input
               type="number"
               min="10"
@@ -144,7 +144,7 @@ const TextToolbar: React.FC<TextToolbarProps> = ({ canvasRef }) => {
 
           {/* Font Family */}
           <div className="mb-4">
-            <label>Font Family: </label>
+            <label>Үсэгний фонт: </label>
             <select
               value={fontFamily}
               onChange={(e) => {
@@ -163,7 +163,7 @@ const TextToolbar: React.FC<TextToolbarProps> = ({ canvasRef }) => {
 
           {/* Font Color */}
           <div className="mb-4">
-            <label>Font Color: </label>
+            <label>Үсэгний өнгө: </label>
             <input
               type="color"
               value={fontColor}
@@ -184,7 +184,7 @@ const TextToolbar: React.FC<TextToolbarProps> = ({ canvasRef }) => {
                 updateText({ fontWeight: isBold ? "normal" : "bold" });
               }}
             >
-              B
+              Bold
             </button>
 
             <button
@@ -194,7 +194,7 @@ const TextToolbar: React.FC<TextToolbarProps> = ({ canvasRef }) => {
                 updateText({ fontStyle: isItalic ? "normal" : "italic" });
               }}
             >
-              I
+              Italic
             </button>
           </div>
         </>

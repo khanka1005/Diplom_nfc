@@ -282,7 +282,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
             onClick={() => setSelectedTool("gallery")}
           >
             <BsImages size={24} className="mb-1" />
-            <span className="text-xs text-center">Card View</span>
+            <span className="text-xs text-center">Карт</span>
           </div>
   
           <div
@@ -292,7 +292,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
             onClick={() => setSelectedTool("webview")}
           >
             <BsClipboardCheck size={24} className="mb-1" />
-            <span className="text-xs text-center">Web View</span>
+            <span className="text-xs text-center">Нэрийн хуудас</span>
           </div>
   
           <div
@@ -302,7 +302,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
             onClick={() => setSelectedTool("templates")}
           >
             <AiOutlineAppstore size={24} className="mb-1" />
-            <span className="text-xs text-center">Templates</span>
+            <span className="text-xs text-center">Жишээ загвар</span>
           </div>
   
           <div
@@ -312,10 +312,11 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
             onClick={() => setSelectedTool("text")}
           >
             <AiOutlineFontSize size={24} className="mb-1" />
-            <span className="text-xs text-center">Text</span>
+            <span className="text-xs text-center">Текст</span>
           </div>
   
           {/* Background Color Picker tab */}
+          {/*
           <div
             className={`flex flex-col items-center justify-center p-3 cursor-pointer mb-4 ${
               selectedTool === "background" ? "text-orange-500" : "text-gray-700 hover:text-gray-900"
@@ -328,7 +329,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
             />
             <span className="text-xs text-center">Background</span>
           </div>
-
+*/}
           <div
   className={`flex flex-col items-center justify-center p-3 cursor-pointer mb-4 ${
     selectedTool === "object" ? "text-orange-500" : "text-gray-700 hover:text-gray-900"
@@ -338,7 +339,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
   <div className="w-6 h-6 rounded-full bg-red-400 text-white flex items-center justify-center mb-1">
     ✕
   </div>
-  <span className="text-xs text-center">Object</span>
+  <span className="text-xs text-center">Устгах</span>
 </div>
         </div>
   
@@ -347,7 +348,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
           <div className="flex-1 p-4 overflow-y-auto relative z-20">
          {selectedTool === "object" ? (
   <div className="flex flex-col gap-2 mt-2">
-    <p className="text-sm font-medium">Manage Object</p>
+    <p className="text-sm font-medium">Объект сонгох</p>
     <button
       className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
       onClick={() => {
@@ -360,7 +361,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ canvasRef, canvasRef2, currentSection
         }
       }}
     >
-      Delete Selected
+      Сонгогдсон элементийг устгах
     </button>
   </div>
 ) : selectedTool === "text" ? (

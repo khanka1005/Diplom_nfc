@@ -43,6 +43,16 @@ export const useCanvasController = ({
   const CARD_HEIGHT = 600;
   const PROFILE_RADIUS = 50;
 
+  // Track element positions for dynamic positioning
+  const elementPositions = {
+    nameBottom: 0,
+    professionBottom: 0,
+    companyBottom: 0,
+    contactInfoBottom: 0,
+    socialIconsBottom: 0,
+    websiteInfoBottom: 0
+  };
+
   const initCanvas = async() => {
     const canvasEl = canvasElRef.current;
     if (!canvasEl) return;
@@ -83,27 +93,176 @@ export const useCanvasController = ({
     createProfileSection(canvas);
     
     // Add name, profession and company info
-    addPersonalInfo(canvas);
+    await addPersonalInfo(canvas);
     
-    // Add contact info
-    addContactInfo(canvas);
+    // Add contact info - now with dynamic positioning based on previous elements
+    await addContactInfo(canvas);
     
-    // Add social icons
-    addSocialIcons(canvas);
+    // Add social icons - dynamically positioned
+    await addSocialIcons(canvas);
     
-    // Add website and social handle
+    // Add website and social handle - dynamically positioned
     addWebsiteInfo(canvas);
     
-    // Add save contact button
+    // Add save contact button - dynamically positioned
     addSaveContactButton(canvas);
     
-   addContactInfo(canvas);
-    
-    canvas.on("object:modified", () => {
+    canvas.on("object:modified", (e) => {
+      // Check if the modified object is a text object
+      if (e.target && (e.target.type === 'text' || e.target.type === 'textbox')) {
+        // Recalculate positions based on the modified element
+        repositionElements(canvas);
+      }
+      
       onCanvasUpdate?.(JSON.stringify(canvas.toJSON()));
     });
-    
+    // Re-add profile image if it exists
+    if (profileImageBase64Ref.current) {
+      loadImage(profileImageBase64Ref.current, false); // don't show toast during redraw
+    }
     canvas.renderAll();
+  };
+
+  // Function to reposition elements after text changes
+  const repositionElements = (canvas: fabric.Canvas) => {
+    const objects = canvas.getObjects();
+    
+    // Find text objects by their properties
+    const nameObj = objects.find((obj: any) => obj.text && obj.text.includes(userInfo.name));
+    const professionObj = objects.find((obj: any) => obj.text && obj.text.includes(userInfo.profession));
+    
+    if (nameObj) {
+      // Update name bottom position
+      elementPositions.nameBottom = nameObj.top! + (nameObj.height! || 25);
+      
+      // If profession exists, update its position
+      if (professionObj) {
+        professionObj.set({ top: elementPositions.nameBottom + 10 });
+        elementPositions.professionBottom = professionObj.top! + (professionObj.height! || 20);
+      }
+      
+      // Update company info position if it exists
+      updateCompanyPosition(canvas);
+      
+      // Update contact info positions
+      updateContactInfoPosition(canvas);
+      
+      // Update social icons position
+      updateSocialIconsPosition(canvas);
+      
+      // Update website info position
+      updateWebsiteInfoPosition(canvas);
+      
+      // Update save button position
+      updateSaveButtonPosition(canvas);
+     
+      canvas.renderAll();
+    }
+  };
+
+  const updateCompanyPosition = (canvas: fabric.Canvas) => {
+    if (!userInfo.companyName) return;
+    
+    const objects = canvas.getObjects();
+    const companyNameObj = objects.find((obj: any) => obj.text && obj.text === userInfo.companyName);
+    const lineLeft = objects.find((obj: any) => obj.type === 'line' && obj.left! < CARD_WIDTH / 2);
+    const lineRight = objects.find((obj: any) => obj.type === 'line' && obj.left! > CARD_WIDTH / 2);
+    
+    if (companyNameObj && lineLeft && lineRight) {
+      const newY = elementPositions.professionBottom + 20;
+      companyNameObj.set({ top: newY });
+      lineLeft.set({ y1: newY, y2: newY });
+      lineRight.set({ y1: newY, y2: newY });
+      
+      elementPositions.companyBottom = newY + 20;
+    }
+  };
+
+  const updateContactInfoPosition = (canvas: fabric.Canvas) => {
+    const objects = canvas.getObjects();
+  
+    const startY = elementPositions.companyBottom || elementPositions.professionBottom || 250;
+    let currentY = startY + 20;
+  
+    const contactItems = [
+      {
+        icon: objects.find((obj: any) => obj.type === "image" && obj.top! >= startY && obj.top! < startY + 60),
+        text: objects.find((obj: any) => obj.phone === userInfo.phone),
+      },
+      {
+        icon: objects.find((obj: any) => obj.type === "image" && obj.top! >= startY + 50 && obj.top! < startY + 100),
+        text: objects.find((obj: any) => obj.email === userInfo.email),
+      },
+      userInfo.address
+        ? {
+            icon: objects.find((obj: any) => obj.type === "image" && obj.top! >= startY + 100 && obj.top! < startY + 150),
+            text: objects.find((obj: any) => obj.text === userInfo.address),
+          }
+        : null,
+    ].filter(Boolean);
+  
+    for (const pair of contactItems) {
+      const icon = pair!.icon;
+      const text = pair!.text;
+  
+      const textHeight = text?.getScaledHeight?.() || text?.height || 20;
+      const iconHeight = icon?.getScaledHeight?.() || icon?.height || 20;
+  
+      // Align both icon and text vertically
+      const alignedTop = currentY;
+  
+      if (icon) icon.set({ top: alignedTop });
+      if (text) text.set({ top: alignedTop });
+  
+      currentY += Math.max(textHeight, iconHeight) + 10;
+    }
+  
+    elementPositions.contactInfoBottom = currentY;
+  };
+
+  const updateSocialIconsPosition = (canvas: fabric.Canvas) => {
+    const objects = canvas.getObjects();
+    const socialObjects = objects.filter((obj: any) => 
+      (obj.type === 'image' && obj.url && obj.top! > 350) || 
+      (obj.type === 'circle' && obj.fill === accentColor && obj.top! > 350)
+    );
+    
+    if (socialObjects.length === 0) return;
+    
+    const newTop = elementPositions.contactInfoBottom + 20;
+    
+    socialObjects.forEach(obj => {
+      obj.set({ top: newTop });
+    });
+    
+    elementPositions.socialIconsBottom = newTop + 35;
+  };
+
+  const updateWebsiteInfoPosition = (canvas: fabric.Canvas) => {
+    const objects = canvas.getObjects();
+    const websiteText = objects.find((obj: any) => obj.text === userInfo.website);
+    const socialHandleObj = objects.find((obj: any) => obj.text && obj.text.startsWith('@'));
+    
+    if (websiteText || socialHandleObj) {
+      const newTop = elementPositions.socialIconsBottom + 20;
+      
+      if (websiteText) websiteText.set({ top: newTop });
+      if (socialHandleObj) socialHandleObj.set({ top: newTop + (websiteText ? 25 : 0) });
+      
+      elementPositions.websiteInfoBottom = newTop + (websiteText && socialHandleObj ? 50 : 25);
+    }
+  };
+
+  const updateSaveButtonPosition = (canvas: fabric.Canvas) => {
+    const objects = canvas.getObjects();
+    const saveBtn = objects.find((obj: any) => obj.type === 'rect' && obj.rx === 20);
+    const saveText = objects.find((obj: any) => obj.text === "Контакт хадгалах");
+    
+    if (saveBtn && saveText) {
+      const newTop = elementPositions.websiteInfoBottom + 30;
+      saveBtn.set({ top: newTop });
+      saveText.set({ top: newTop + 20 });
+    }
   };
 
   const createCardBackground = (canvas: fabric.Canvas) => {
@@ -128,8 +287,6 @@ export const useCanvasController = ({
       evented: false,
     });
     canvas.add(headerBg);
-    
-  
   };
 
   const createProfileSection = (canvas: fabric.Canvas) => {
@@ -162,13 +319,14 @@ export const useCanvasController = ({
   
     canvas.add(dipShape, profileFrame);
   };
-  const addPersonalInfo = (canvas: fabric.Canvas) => {
+
+  const addPersonalInfo = async (canvas: fabric.Canvas) => {
     // Name
-    
     const name = new fabric.Textbox(userInfo.name.toUpperCase(), {
       left: CARD_WIDTH / 2,
       top: 200,
       width: 200,
+      splitByGrapheme: true,
       fontSize: 18,
       fontFamily: 'Times New Roman',
       fontWeight: "bold", 
@@ -178,12 +336,17 @@ export const useCanvasController = ({
       selectable: true,
       evented: true,
     });
+  
+    // Calculate the rendered height of the name
+    const nameHeight = name.calcTextHeight();
+    elementPositions.nameBottom = name.top! + nameHeight + 5;
     
-    // Profession
+    // Profession - positioned based on name
     const profession = new fabric.Textbox(userInfo.profession.toUpperCase(), {
       left: CARD_WIDTH / 2,
-      top: name.top + 25,
+      top: elementPositions.nameBottom + 5,
       width: 200,
+      splitByGrapheme: true,
       fontSize: 14,
       fontFamily: 'Arial',
       textAlign: "center",
@@ -192,88 +355,93 @@ export const useCanvasController = ({
       selectable: true,
       evented: true,
     });
+   
+    // Calculate the rendered height of the profession
+    const professionHeight = profession.calcTextHeight();
+    elementPositions.professionBottom = profession.top! + professionHeight + 5;
     
     // Company name (with horizontal line above and below)
     if (userInfo.companyName) {
-      const lineY = profession.top! + 40;
+      const lineY = elementPositions.professionBottom + 10;
     
-      // Company name text
-      const companyName = new fabric.Text(userInfo.companyName, {
+      // Draw a centered horizontal line (with padding on sides)
+      const horizontalLine = new fabric.Line(
+        [30, lineY, CARD_WIDTH - 30, lineY], // 👈 30px padding on both sides
+        {
+          stroke: accentColor,
+          strokeWidth: 2,
+          selectable: false,
+          evented: false,
+        }
+      );
+    
+      // Company name text below the line
+      const companyTextY = lineY + 8;
+      const companyName = new fabric.Textbox(userInfo.companyName, {
         fontSize: 14,
         fontFamily: 'Arial',
+        width: 200,
+        splitByGrapheme: true,
         fill: "#333333",
         originX: "center",
-        originY: "center",
+        originY: "top",
         left: CARD_WIDTH / 2,
-        top: lineY,
+        top: companyTextY,
         selectable: false,
         evented: false,
       });
     
-      // Line: left segment
-      const lineLeft = new fabric.Line(
-        [20, lineY, CARD_WIDTH / 2 - 60, lineY],
-        {
-          stroke: accentColor,
-          strokeWidth: 1,
-          selectable: false,
-          evented: false,
-        }
-      );
+      const textHeight = companyName.getScaledHeight();
     
-      // Line: right segment
-      const lineRight = new fabric.Line(
-        [CARD_WIDTH / 2 + 60, lineY, CARD_WIDTH - 20, lineY],
-        {
-          stroke: accentColor,
-          strokeWidth: 1,
-          selectable: false,
-          evented: false,
-        }
-      );
-    
-      canvas.add(lineLeft, companyName, lineRight);
+      canvas.add(horizontalLine, companyName);
+      elementPositions.companyBottom = companyTextY + textHeight + 5;
     }
     
     canvas.add(name, profession);
   };
 
   const addContactInfo = async (canvas: fabric.Canvas) => {
-    const startY = userInfo.companyName ? 280 : 250;
+    const startY = elementPositions.companyBottom || elementPositions.professionBottom || 250;
     const iconSize = 20;
     const textLeft = 20 + iconSize + 10;
     const spacing = 32;
-    const loadAndAddPNG = async (
-      canvas: fabric.Canvas,
-      url: string,
-      left: number,
-      top: number,
-      size: number = 20
-    ): Promise<fabric.Image> => {
-      try {
-        const img = await fabric.Image.fromURL(url, { crossOrigin: "anonymous" });
     
-        img.scaleToWidth(size);
-        img.scaleToHeight(size);
-        img.set({
-          left,
-          top,
-          selectable: false,
-          evented: false,
-        });
+      const loadAndAddPNG = async (
+        canvas: fabric.Canvas,
+        url: string,
+        left: number,
+        top: number,
+        size: number = 20
+      ): Promise<fabric.Image> => {
+        try {
+          const img = await fabric.Image.fromURL(url, { crossOrigin: "anonymous" });
+      
+          img.scaleToWidth(size);
+          img.scaleToHeight(size);
+          img.set({
+            left,
+            top,
+            selectable: false,
+            evented: false,
+          });
+      
+          canvas.add(img);
+          return img;
+        } catch (error) {
+          console.error("Failed to load PNG:", url, error);
+          throw error;
+        }
+      };
+      
+    let currentY = startY + 20;
     
-        canvas.add(img);
-        return img;
-      } catch (error) {
-        console.error("Failed to load PNG:", url, error);
-        throw error;
-      }
-    };
     // 📞 Phone icon + text
-    await loadAndAddPNG(canvas, "https://img.icons8.com/?size=100&id=9659&format=png&color=000000", 20, startY+20);
-    const phoneText = new fabric.Text(userInfo.phone, {
+    const phoneIcon = await loadAndAddPNG(canvas, "https://img.icons8.com/?size=100&id=9659&format=png&color=000000", 20, currentY);
+    const phoneText = new fabric.Textbox(userInfo.phone, {
       left: textLeft,
-      top: startY+20,
+      top: currentY,
+      width: 200,
+      splitByGrapheme: true,
       fontSize: 17,
       fontFamily: "Arial",
       fill: "#000000",
@@ -286,11 +454,20 @@ export const useCanvasController = ({
     });
     canvas.add(phoneText);
   
+    const phoneHeight = Math.max(phoneIcon.getScaledHeight(), phoneText.getScaledHeight());
+    const phoneIconOffset = (phoneHeight - phoneIcon.getScaledHeight()) / 2;
+    const phoneTextOffset = (phoneHeight - phoneText.getScaledHeight()) / 2;
+    phoneIcon.set({ top: currentY + phoneIconOffset });
+    phoneText.set({ top: currentY + phoneTextOffset });
+    currentY += phoneHeight + 10;
+  
     // 📧 Email icon + text
-    await loadAndAddPNG(canvas, "https://cdn-icons-png.flaticon.com/512/561/561127.png", 20, startY+50);
-    const emailText = new fabric.Text(userInfo.email, {
+    const emailIcon = await loadAndAddPNG(canvas, "https://cdn-icons-png.flaticon.com/512/561/561127.png", 20, currentY);
+    const emailText = new fabric.Textbox(userInfo.email, {
       left: textLeft,
-      top: startY + spacing+20,
+      top: currentY,
+      width: 200,
+      splitByGrapheme: true,
       fontSize: 17,
       fontFamily: "Arial",
       fill: "#000000",
@@ -303,12 +480,21 @@ export const useCanvasController = ({
     });
     canvas.add(emailText);
   
-    // 📍 Address icon + text (only if exists)
+    const emailHeight = Math.max(emailIcon.getScaledHeight(), emailText.getScaledHeight());
+    const emailIconOffset = (emailHeight - emailIcon.getScaledHeight()) / 2;
+    const emailTextOffset = (emailHeight - emailText.getScaledHeight()) / 2;
+    emailIcon.set({ top: currentY + emailIconOffset });
+    emailText.set({ top: currentY + emailTextOffset });
+    currentY += emailHeight + 10;
+  
+    // 📍 Address icon + text (optional)
     if (userInfo.address) {
-      await loadAndAddPNG(canvas, "https://img.icons8.com/?size=100&id=53383&format=png&color=000000", 20, startY + spacing * 2+20);
-      const addressText = new fabric.Text(userInfo.address, {
+      const addressIcon = await loadAndAddPNG(canvas, "https://img.icons8.com/?size=100&id=53383&format=png&color=000000", 20, currentY);
+      const addressText = new fabric.Textbox(userInfo.address, {
         left: textLeft,
-        top: startY + spacing * 2+20,
+        top: currentY,
+        width: 200,
+        splitByGrapheme: true,
         fontSize: 17,
         fontFamily: "Arial",
         fill: "#000000",
@@ -316,11 +502,21 @@ export const useCanvasController = ({
         evented: false,
       });
       canvas.add(addressText);
+  
+      const addressHeight = Math.max(addressIcon.getScaledHeight(), addressText.getScaledHeight());
+      const addressIconOffset = (addressHeight - addressIcon.getScaledHeight()) / 2;
+      const addressTextOffset = (addressHeight - addressText.getScaledHeight()) / 2;
+      addressIcon.set({ top: currentY + addressIconOffset });
+      addressText.set({ top: currentY + addressTextOffset });
+      currentY += addressHeight + 10;
     }
+  
+    elementPositions.contactInfoBottom = currentY;
   };
 
-  const addSocialIcons = (canvas: fabric.Canvas) => {
-    const startY = 400;
+  const addSocialIcons = async (canvas: fabric.Canvas) => {
+    // Calculate starting Y position based on contact info
+    const startY = elementPositions.contactInfoBottom + 20;
     const iconSize = 30;
     const spacing = 30; // 👈 space *between* icons
     const totalWidth = socialLinks.length * (iconSize + spacing) - spacing;
@@ -332,49 +528,63 @@ export const useCanvasController = ({
       Twitter: "https://img.icons8.com/?size=100&id=6Fsj3rv2DCmG&format=png&color=000000",
     };
   
-    socialLinks.forEach((link, index) => {
+    const iconPromises = socialLinks.map((link, index) => {
       const iconUrl = socialIconMap[link.platform] || "https://cdn.jsdelivr.net/npm/simple-icons@v10/icons/facebook.svg";
-      const iconLeft = startX + index * (iconSize + spacing)+17; // 👈 proper spacing
+      const iconLeft = startX + index * (iconSize + spacing) + 17; // 👈 proper spacing
   
-      fabric.Image.fromURL(iconUrl, { crossOrigin: "anonymous" }).then((icon) => {
-        icon.scaleToWidth(iconSize);
-        icon.scaleToHeight(iconSize);
-        icon.set({
-          left: iconLeft,
-          top: startY + 20,
-          selectable: false,
-          evented: true,
-          url: link.url,
-          originX: "center",
-          originY: "center",
+      return new Promise<void>((resolve) => {
+        fabric.Image.fromURL(iconUrl, { crossOrigin: "anonymous" }).then((icon) => {
+          icon.scaleToWidth(iconSize);
+          icon.scaleToHeight(iconSize);
+          icon.set({
+            left: iconLeft,
+            top: startY,
+            selectable: false,
+            evented: true,
+            url: link.url,
+            originX: "center",
+            originY: "center",
+          });
+    
+          const circle = new fabric.Circle({
+            radius: iconSize / 2 + 5,
+            fill: accentColor,
+            left: iconLeft,
+            top: startY,
+            selectable: false,
+            evented: false,
+            originX: "center",
+            originY: "center",
+          });
+    
+          icon.on("mousedown", () => {
+            const normalized = link.url.startsWith("http") ? link.url : `https://${link.url}`;
+            window.open(normalized, "_blank");
+          });
+    
+          canvas.add(circle, icon);
+          resolve();
         });
-  
-        const circle = new fabric.Circle({
-          radius: iconSize / 2 + 5,
-          fill: accentColor,
-          left: iconLeft,
-          top: startY + 20,
-          selectable: false,
-          evented: false,
-          originX: "center",
-          originY: "center",
-        });
-  
-        icon.on("mousedown", () => {
-          const normalized = link.url.startsWith("http") ? link.url : `https://${link.url}`;
-          window.open(normalized, "_blank");
-        });
-  
-        canvas.add(circle, icon);
       });
     });
+    
+    // Wait for all icons to be added
+    await Promise.all(iconPromises);
+    
+    // Store the bottom position of social icons section
+    elementPositions.socialIconsBottom = startY + iconSize;
   };
 
   const addWebsiteInfo = (canvas: fabric.Canvas) => {
+    // Calculate starting Y position based on social icons
+    const startY = elementPositions.socialIconsBottom + 20;
+    
     if (userInfo.website) {
-      const websiteText = new fabric.Text(userInfo.website, {
+      const websiteText = new fabric.Textbox(userInfo.website, {
         left: CARD_WIDTH / 2,
-        top: 450,
+        top: startY,
+        width: 200,
+        splitByGrapheme: true,
         fontSize: 16,
         fontFamily: 'Arial',
         fill: "#000000",
@@ -393,14 +603,19 @@ export const useCanvasController = ({
       });
       
       canvas.add(websiteText);
+      
+      // Update Y position for social handle if it exists
+      elementPositions.websiteInfoBottom = startY + 20;
     }
     
-    // Social handle if available
+    // Social handle if available - positioned below website if exists
     const socialHandle = socialLinks.find(link => link.handle)?.handle;
     if (socialHandle) {
-      const handleText = new fabric.Text(`@${socialHandle}`, {
+      const handleText = new fabric.Textbox(`@${socialHandle}`, {
         left: CARD_WIDTH / 2,
-        top: 450,
+        top: userInfo.website ? elementPositions.websiteInfoBottom + 5 : startY,
+        width: 200,
+        splitByGrapheme: true,
         fontSize: 14,
         fontFamily: 'Arial',
         fill: "#dddddd",
@@ -411,10 +626,19 @@ export const useCanvasController = ({
       });
       
       canvas.add(handleText);
+      
+      // Update website info bottom position
+      elementPositions.websiteInfoBottom = handleText.top! + 20;
+    } else if (!userInfo.website) {
+      // If neither website nor social handle exists
+      elementPositions.websiteInfoBottom = startY;
     }
   };
 
   const addSaveContactButton = (canvas: fabric.Canvas) => {
+    // Calculate starting Y position based on website info
+    const startY = elementPositions.websiteInfoBottom + 30;
+    
     const saveBtn = new fabric.Rect({
       width: 160,
       height: 40,
@@ -422,7 +646,7 @@ export const useCanvasController = ({
       rx: 20,
       ry: 20,
       left: CARD_WIDTH / 2,
-      top: 490,
+      top: startY,
       originX: "center",
       selectable: false,
       evented: true,
@@ -430,7 +654,7 @@ export const useCanvasController = ({
   
     const saveText = new fabric.Text("Контакт хадгалах", {
       left: CARD_WIDTH / 2,
-      top: 510,
+      top: startY + 20,
       fontSize: 16,
       fontFamily: "Arial",
       fontWeight: "bold",
@@ -441,12 +665,10 @@ export const useCanvasController = ({
       evented: false, // 👈 not clickable in editor
     });
   
-    // ✅ No click logic here — keep button for styling only
-  
     canvas.add(saveBtn, saveText);
   };
 
-  const loadImage = (base64: string) => {
+  const loadImage = (base64: string,showToast = true) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -522,7 +744,9 @@ export const useCanvasController = ({
       canvas.bringObjectToFront(img);
       canvas.setActiveObject(img);
       canvas.renderAll();
-      toast.success("Profile image uploaded");
+      if (showToast) {
+        toast.success("Profile image uploaded");
+      }
     }).catch(error => {
       console.error("Error loading image:", error);
       toast.error("Failed to load image");

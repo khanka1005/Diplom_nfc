@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
@@ -46,13 +47,13 @@ const Section5 = () => {
   const [accentColor, setAccentColor] = useState("#b1f7f7");
 
   const [userInfo, setUserInfo] = useState<UserInfo>({
-    name: "Khan-Erdene",
-    profession: "Програм Хангамж",
-    phone: "99119911",
-    email: "name@example.com",
-    address: "СБД, 1-р хороо, УБ хот",
-    website: "www.example.mn",
-    companyName: "NUM",
+    name: "",
+    profession: "",
+    phone: "",
+    email: "",
+    address: "",
+    website: "",
+    companyName: "",
   });
 
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([

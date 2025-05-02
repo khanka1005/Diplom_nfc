@@ -7,7 +7,7 @@ import { getAuthClient, getFirestoreClient } from "@/firebaseConfig";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { FiLogOut } from "react-icons/fi";
-
+import Image from "next/image";
 const NavBar = () => {
   const { user, isAdmin,userName, setUserName, authLoading } = useUser();
   const router = useRouter();
@@ -47,11 +47,12 @@ const NavBar = () => {
   };
 
   return (
-    <nav className="text-black pt-10 py-4 px-8 shadow-md">
+    <nav className="text-black  py-4 px-8 shadow-md">
       <div className="flex justify-between items-center">
-        <Link href="/" className="text-3xl font-bold hover:text-gray-400 transition">
-          NFC_Card
-        </Link>
+      <Link href="/" className="flex items-center gap-2 text-3xl font-bold hover:text-gray-400 transition">
+  <Image src="/logo.png" alt="Logo" width={50} height={50} />
+  NFC Карт
+</Link>
 
         <div className="flex gap-6 items-center">
   {isAdmin && (
@@ -69,7 +70,7 @@ const NavBar = () => {
         onClick={handleLogout}
         className="flex items-center gap-2 border border-red-500 px-4 py-2 rounded-lg text-red-500 hover:bg-red-500 hover:text-white transition"
       >
-        <FiLogOut /> Sign Out
+        <FiLogOut /> Гарах
       </button>
     </div>
   ) : (

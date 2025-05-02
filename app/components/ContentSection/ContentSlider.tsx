@@ -1,13 +1,11 @@
 "use client"; // Ensure it's a client component
 
 import { useState } from "react";
-import Section1 from "./Section1";
-import Section2 from "./Section2";
 import Section3 from "./Section3";
 import Section4 from "./Section4";
 import Section5 from "./Section5";
 
-const sections = [Section4, Section5, Section3, Section2, Section1]; // Section4 is first
+const sections = [Section4, Section5, Section3,]; // Section4 is first
 
 const ContentSlider = () => {
   const [currentIndex, setCurrentIndex] = useState(0); // Default to Section4
