@@ -130,7 +130,7 @@ export const saveCardToFirestore = async ({
       const publicRef = await addDoc(collection(db, "card_public"), payload);
 
       const shareUrl = `${window.location.origin}/card-view/${publicRef.id}`;
-      toast.success(`Card saved! NFC link ready:\n${shareUrl}`);
+      console.log(`Card saved! NFC link ready:\n${shareUrl}`);
     } catch (error) {
       console.error("Error saving to Firestore:", error);
       toast.error("Failed to save data.");

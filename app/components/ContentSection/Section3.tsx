@@ -181,7 +181,7 @@ const Section3 = () => {
     const user = auth.currentUser;
   
     if (!user || !latestOrderId) {
-      toast.error("Missing user or order ID.");
+      toast.error("");
       return;
     }
   
@@ -254,7 +254,7 @@ const Section3 = () => {
                 />
               </div>
               <div className="relative">
-                <label className="text-sm font-medium text-gray-700 mb-1 block">Емайл хаяг <span className="text-red-500">*</span></label>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Цахим шуудан <span className="text-red-500">*</span></label>
                 <input
                   type="email"
                   placeholder="youremail@example.com"
@@ -264,7 +264,7 @@ const Section3 = () => {
                 />
               </div>
               <div className="relative">
-                <label className="text-sm font-medium text-gray-700 mb-1 block">Хүргээлэх хаяг <span className="text-red-500">*</span></label>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Хүргүүлэх хаяг <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   placeholder="БЗД, 13-р хороолол"

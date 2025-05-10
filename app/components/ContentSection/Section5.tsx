@@ -35,8 +35,11 @@ const socialIcons = {
   GitHub: BsGithub,
   WhatsApp: BsWhatsapp,
 };
-
-const Section5 = () => {
+type Section5Props = {
+  navigateToSection: (sectionName: string) => void; // Add this prop
+  currentSection: string; // Add this prop
+};
+const Section5 = ({ navigateToSection, currentSection }: Section5Props) => {
   const canvasRef = useRef<fabric.Canvas | null>(null);
   const canvasElementRef = useRef<HTMLCanvasElement | null>(null);
   const profileImageBase64Ref = useRef<string | null>(null);
@@ -155,11 +158,11 @@ const Section5 = () => {
   };
 
   return (
-    <div className="flex w-[80vw] min-h-screen justify-center items-center gap-6 md:flex-row flex-col items-start my-8 px-4 overflow-y-auto">
+    <div className="flex w-[80vw] min-h-screen  gap-100 md:flex-row flex-col items-start my-8 px-4 overflow-y-auto">
       <ToastContainer position="bottom-right" autoClose={3000} hideProgressBar={false} />
       {/* iPhone Canvas View */}
       <div
-        className="relative w-[300px] h-[650px] rounded-[40px] overflow-hidden"
+        className="fixed w-[300px] h-[650px] rounded-[40px] overflow-hidden"
         style={{
           backgroundImage: `url(https://diplom-nfc.vercel.app/iphoneBase.png)`,
           backgroundSize: "cover",
@@ -195,7 +198,8 @@ const Section5 = () => {
       <Toolbar
         canvasRef={canvasRef}
         canvasRef2={canvasRef}
-        currentSection="section5"
+        currentSection={currentSection as "section5" | "section4"} 
+        navigateToSection={navigateToSection}
         onBackgroundColorChange={(color) => {
           setBackgroundColor(color);
           setTimeout(() => {

@@ -322,7 +322,7 @@ export const useCanvasController = ({
 
   const addPersonalInfo = async (canvas: fabric.Canvas) => {
     // Name
-    const name = new fabric.Textbox(userInfo.name.toUpperCase(), {
+    const name = new fabric.Textbox(userInfo.name, {
       left: CARD_WIDTH / 2,
       top: 200,
       width: 200,
@@ -342,7 +342,7 @@ export const useCanvasController = ({
     elementPositions.nameBottom = name.top! + nameHeight + 5;
     
     // Profession - positioned based on name
-    const profession = new fabric.Textbox(userInfo.profession.toUpperCase(), {
+    const profession = new fabric.Textbox(userInfo.profession, {
       left: CARD_WIDTH / 2,
       top: elementPositions.nameBottom + 5,
       width: 200,

@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { getAuthClient, getFirestoreClient } from "@/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
-import { enableNetwork } from "firebase/firestore";
 
 // Dynamically import ContentSlider with SSR disabled
 const ContentSlider = dynamic(() => import("../components/ContentSection/ContentSlider"), {
@@ -15,6 +14,9 @@ const Ordering = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
 
+  // ✨ Added state for section switching
+  const [currentIndex, setCurrentIndex] = useState(0); // 0 = Section4, 1 = Section5
+
   useEffect(() => {
     const auth = getAuthClient();
 
@@ -23,10 +25,10 @@ const Ordering = () => {
         console.log("🔥 Auth user ready:", currentUser);
         setUser(currentUser);
 
-        // ✅ Force Firestore online
+        // ✅ Optional: Force Firestore online (you had a placeholder here)
         try {
           const db = getFirestoreClient();
-         
+          
         } catch (err: unknown) {
           if (err instanceof Error) {
             console.warn("⚠️ Failed to enable Firestore network:", err.message);
@@ -49,7 +51,9 @@ const Ordering = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
-      <ContentSlider />
+   
+      {/* ✨ Pass section state to ContentSlider */}
+      <ContentSlider  />
     </div>
   );
 };

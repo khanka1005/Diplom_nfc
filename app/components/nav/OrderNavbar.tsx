@@ -8,7 +8,8 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { FiLogOut } from "react-icons/fi";
 import Image from "next/image";
-const NavBar = () => {
+import HelpButton from "./HelpButton";
+const OrderNavBar = () => {
   const { user, isAdmin,userName, setUserName, authLoading } = useUser();
   const router = useRouter();
   useEffect(() => {
@@ -58,10 +59,13 @@ const NavBar = () => {
       Dashboard
     </Link>
   )}
+ <div className="relative left-[-800px]">
+  <HelpButton />
+</div>
 
   {user ? (
     <div className="flex items-center gap-4">
-      <span className="font-semibold text-blue-600">
+      <span className="font-semibold text-[#527ac9]">
         {userName || "Loading..."}
       </span>
       <button
@@ -93,4 +97,4 @@ const NavBar = () => {
   );
 };
 
-export default NavBar;
+export default OrderNavBar;

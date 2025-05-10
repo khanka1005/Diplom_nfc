@@ -144,8 +144,7 @@ setCardData(data);
 
     const loadCanvasState = async () => {
       try {
-        // Apply background color to the entire viewport
-       // Apply background color to the entire viewport
+       
 if (cardData.backgroundColorHex) {
   canvas.backgroundColor = cardData.backgroundColorHex;
  
@@ -158,7 +157,7 @@ if (cardData.backgroundColorHex) {
         // Calculate scale to fit the entire device viewport
         const scaleWidth = fullWidth / originalWidth;
         const scaleHeight = fullHeight / originalHeight;
-        const scale = Math.max(scaleWidth, scaleHeight) * 0.7; // Use the larger scale to ensure full coverage
+        const scale = Math.max(scaleWidth, scaleHeight) * 0.7; 
         
         // Set dimensions to cover the entire viewport
         canvas.setWidth(fullWidth);
