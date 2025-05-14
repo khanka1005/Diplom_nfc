@@ -181,7 +181,7 @@ const Section3 = () => {
     const user = auth.currentUser;
   
     if (!user || !latestOrderId) {
-      toast.error("");
+      
       return;
     }
   
