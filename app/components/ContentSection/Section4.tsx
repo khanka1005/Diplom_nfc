@@ -44,7 +44,7 @@ const Section4 = ({ canvasState, onCanvasUpdate, navigateToSection, currentSecti
 
   const [saving, setSaving] = useState(false);
 
-  // First useEffect: Initialize canvas
+ 
   useEffect(() => {
     if (!canvasElementRef.current) return;
 
@@ -115,9 +115,9 @@ const Section4 = ({ canvasState, onCanvasUpdate, navigateToSection, currentSecti
     return () => {
       canvas.dispose();
     };
-  }, []); // ✅ Runs once to initialize canvas
+  }, []); 
 
-  // Second useEffect: Handle loading canvas state
+  
   useEffect(() => {
     const canvas = canvasRef.current;
     
@@ -275,7 +275,7 @@ const Section4 = ({ canvasState, onCanvasUpdate, navigateToSection, currentSecti
     };
     
     loadCanvasState();
-  }, [canvasState]); // Only run when canvasState changes
+  }, [canvasState]); 
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -465,6 +465,28 @@ const Section4 = ({ canvasState, onCanvasUpdate, navigateToSection, currentSecti
         {saving ? "Загвар хадгалж байна..." : "Загвар хадгалах"}
       </button>
 
+      <button
+  onClick={() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dataURL = canvas.toDataURL({
+      format: 'png',
+      quality: 1.0,
+      multiplier: 2, 
+    });
+
+  
+    const link = document.createElement('a');
+    link.href = dataURL;
+    link.download = 'canvas-design.png';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }}
+  className="px-4 py-2 bg-gray-600 text-white w-125 rounded-md hover:bg-blue-600"
+>
+  Загвар татаж авах
+</button>
       {/* Pass canvasRef and navigateToSection to Toolbar */}
       <Toolbar 
         canvasRef={canvasRef} 
